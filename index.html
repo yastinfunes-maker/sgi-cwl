@@ -558,23 +558,28 @@ function syncUI(){
 async function flush(){
   if (!S.db || S.flushing || !navigator.onLine || !S.out.length) { syncUI(); return; }
   S.flushing=true; syncUI();
-  while (S.out.length){
-    const op=S.out[0];
+  // si la base rechaza un cambio por permisos (reglas de Firestore sin actualizar), ese queda esperando
+  // pero no frena a los demás: se siguen subiendo los que sí se pueden
+  const sinPermiso=new Set(); let i=0;
+  while (i<S.out.length){
+    const op=S.out[i];
     try {
       const ref=S.db.doc(op.path);
       if (op.op==='set') await ref.set(op.data); else if (op.op==='update') await ref.update(op.data); else await ref.delete();
-      S.out.shift(); persist();
+      S.out.splice(i,1); persist();
     } catch(e){
       const code=e&&e.code;
+      if (/permission|insufficient/i.test(String((e&&e.message)||''))){ sinPermiso.add(String(op.path).split('/')[0]); i++; continue; }
       if (code==='invalid_argument' || code==='transform_error'){
         if (S.canWrite===false){ banner('Tu acceso a esta plataforma es de solo lectura: lo que cargues queda en este equipo y no se sube. Pedí al dueño acceso de <b>Colaborador</b>.', 'bad'); S.live=false; break; }
-        S.out.shift(); persist(); toast('Se descartó un cambio que la base no aceptó (el servicio pudo haber sido eliminado)'); continue;
+        S.out.splice(i,1); persist(); toast('Se descartó un cambio que la base no aceptó (el servicio pudo haber sido eliminado)'); continue;
       }
       if (code==='quota_exceeded'){ banner('La base compartida llegó a su límite. Exportá la base y eliminá servicios viejos para liberar espacio.', 'bad'); break; }
       S.live=false; break;
     }
   }
   S.flushing=false; rebuild(); syncUI(); refresh(true);
+  if (sinPermiso.size){ const nom={eqp:'Equipos',hta:'Herramientas',adjuntos:'archivos adjuntos'}; banner(`La base todavía no acepta <b>${[...sinPermiso].map(c=>nom[c]||c).join(', ')}</b>: falta publicar las reglas nuevas en Firebase (Firestore → Reglas). Lo cargado queda guardado en este equipo y se sube solo cuando estén publicadas.`, 'warn'); }
 }
 addEventListener('online', ()=>{ syncUI(); flush(); });
 addEventListener('offline', syncUI);
