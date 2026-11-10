@@ -8,13 +8,14 @@
   const AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#0d5b6b"/><circle cx="12" cy="9.5" r="4" fill="#fff"/><path d="M4.5 20c1.5-3.6 4.3-5.2 7.5-5.2s6 1.6 7.5 5.2" fill="#fff"/></svg>');
 
   /* ---------- pantalla de ingreso ---------- */
-  const css = `#sgi-login{position:fixed;inset:0;z-index:100;background:#0e2230;display:flex;align-items:center;justify-content:center;padding:16px;font-family:"IBM Plex Sans",system-ui,sans-serif}
+  const css = `#sgi-login{color-scheme:light;position:fixed;inset:0;z-index:100;background:#0e2230;display:flex;align-items:center;justify-content:center;padding:16px;font-family:"IBM Plex Sans",system-ui,sans-serif}
   #sgi-login .box{background:#fff;color:#172126;border-radius:16px;padding:28px 26px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
   #sgi-login img{height:54px;display:block;margin:0 auto 14px}
   #sgi-login h1{font:700 20px "IBM Plex Sans Condensed",system-ui,sans-serif;text-align:center;margin:0 0 4px}
   #sgi-login p{font-size:13.5px;color:#4b5a60;text-align:center;margin:0 0 18px}
   #sgi-login label{display:block;font:600 11px "IBM Plex Sans Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#4b5a60;margin:10px 0 4px}
-  #sgi-login input{width:100%;box-sizing:border-box;font:15px system-ui,sans-serif;padding:10px;border:1px solid #d5dcda;border-radius:6px;background:#f6f8f7}
+  #sgi-login input{width:100%;box-sizing:border-box;font:16px system-ui,sans-serif;padding:10px;border:1px solid #d5dcda;border-radius:6px;background:#f6f8f7;color:#172126;-webkit-text-fill-color:#172126;caret-color:#172126;opacity:1}
+  #sgi-login input:-webkit-autofill{-webkit-box-shadow:0 0 0 40px #f6f8f7 inset;-webkit-text-fill-color:#172126}
   #sgi-login button{width:100%;margin-top:14px;font:600 15px system-ui,sans-serif;padding:11px;border-radius:6px;border:1px solid #0d5b6b;background:#0d5b6b;color:#fff;cursor:pointer}
   #sgi-login button.alt{background:#fff;color:#0d5b6b}
   #sgi-login .lnk{background:none;border:0;color:#0d5b6b;padding:6px;margin-top:6px;font-size:13px;width:auto;display:block;margin-inline:auto}
