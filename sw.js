@@ -1,5 +1,5 @@
 /* Guarda la app en el equipo para poder abrirla sin señal (en el pozo). Los datos los guarda Firestore. */
-const CACHE = 'sgi-cwl-v2';
+const CACHE = 'sgi-cwl-v5';
 const SHELL = ['./', './index.html', './firebase-config.js', './sgi-firebase.js', './manifest.webmanifest', './logo.png', './icon-192.png', './icon-512.png',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',

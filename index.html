@@ -353,6 +353,30 @@ header.top .wrap{gap:12px}
 .pd .fts div{font-size:7.5px;text-align:center}
 .pd .fts img{width:100%;aspect-ratio:1;object-fit:cover;border:1px solid #444;display:block}
 
+/* aviso de vencimientos al elegir persona o unidad */
+.venc-warn{font-size:12px;line-height:1.7;margin-top:4px;color:var(--ink,#172126)}
+.venc-warn .pill{margin-right:2px}
+/* documentación adjunta (legajos y flota) */
+.adj-drop{border:2px dashed var(--line,#c9d3d1);border-radius:10px;padding:14px;text-align:center;color:var(--ink-2);font-size:13.5px;margin-bottom:12px}
+.adj-drop.on{border-color:var(--accent);background:var(--accent-soft)}
+.adj-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:10px}
+.adj-row select,.adj-row input{font:inherit;padding:8px;border-radius:6px;border:1px solid var(--line,#c9d3d1);background:var(--surface);color:var(--ink)}
+.adj-btn{display:inline-flex;align-items:center;gap:6px;font:600 13.5px system-ui,sans-serif;padding:9px 12px;border-radius:6px;border:1px solid var(--accent);color:var(--accent);background:none;cursor:pointer}
+.adj-btn input{display:none}
+.adj-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.adj-it{display:flex;gap:10px;align-items:center;border:1px solid var(--line,#c9d3d1);border-radius:8px;padding:8px;background:var(--surface);min-width:0}
+.adj-it .ic{width:52px;height:52px;flex:none;border-radius:6px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font:700 12px system-ui;color:var(--accent);overflow:hidden}
+.adj-it .ic img{width:100%;height:100%;object-fit:cover}
+.adj-it .tx{min-width:0;flex:1;font-size:13px;line-height:1.35}
+.adj-it .tx b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adj-it .tx small{color:var(--ink-3)}
+.adj-it button{background:none;border:0;cursor:pointer;color:var(--accent);font:600 12.5px system-ui;padding:4px}
+.adj-it .x{color:var(--bad)}
+.adj-link{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.adj-link input{flex:1;min-width:200px}
+#adjm img{max-width:100%;max-height:70dvh;object-fit:contain;align-self:center}
+#avm textarea{width:100%;box-sizing:border-box;min-height:110px;font:14px system-ui;padding:8px;border-radius:6px;border:1px solid var(--line,#c9d3d1);background:var(--surface);color:var(--ink)}
+#avm input{font:14px system-ui;padding:8px;border-radius:6px;border:1px solid var(--line,#c9d3d1);background:var(--surface);color:var(--ink);width:90px}
 </style>
 
 <div class="app">
@@ -1415,7 +1439,7 @@ function renderCol(rk){
   if (v.dataset.rk!==rk){
     v.dataset.rk=rk;
     const sts = (R.f.find(f=>f.k===R.st)||{}).o||[];
-    v.innerHTML = `<div class="listhead"><div><h2>${esc(R.t)}</h2><div class="muted small">${esc(R.sub)}</div></div><div class="exp"><button class="btn-g" id="col-csv">Exportar CSV</button></div></div>
+    v.innerHTML = `<div class="listhead"><div><h2>${esc(R.t)}</h2><div class="muted small">${esc(R.sub)}</div></div><div class="exp">${(rk==='personal'||rk==='flota')?'<button class="btn-g" id="col-avisos">✉ Avisos por correo</button>':''}<button class="btn-g" id="col-csv">Exportar CSV</button></div></div>
       <div class="colbar"><input class="q" id="col-q" type="search" placeholder="Buscar…" aria-label="Buscar" value="${esc(F_.q)}"><select id="col-st" aria-label="Filtrar por ${esc(R.st)}"><option value="">Todos</option>${sts.map(s=>`<option ${s===F_.st?'selected':''}>${esc(s)}</option>`).join('')}</select><span class="muted small" id="col-count"></span></div>
       <div class="chips" id="col-chips"></div>
       <div class="tbl-wrap"><table><thead><tr>${R.cols.map(k=>`<th>${esc((R.f.find(f=>f.k===k)||{}).l||k)}</th>`).join('')}</tr></thead><tbody id="col-body"></tbody></table></div>`;
@@ -1423,6 +1447,7 @@ function renderCol(rk){
     $('#col-st').oninput=e=>{ F_.st=e.target.value; renderColBody(rk); };
     $('#col-body').onclick=e=>{ const tr=e.target.closest('tr[data-id]'); if (tr) openRec(rk, tr.dataset.id); };
     $('#col-chips').onclick=e=>{ const b=e.target.closest('[data-st]'); if (!b) return; F_.st = F_.st===b.dataset.st?'':b.dataset.st; $('#col-st').value=F_.st; renderColBody(rk); };
+    const av=$('#col-avisos'); if (av) av.onclick=abrirAvisos;
     $('#col-csv').onclick=()=>{ const rows=colFiltered(rk); saveFile(`cwl_${rk}_${today()}.csv`, csv([R.f.map(f=>f.l), ...rows.map(d=>R.f.map(f=>d[f.k]??''))])); };
   }
   renderColBody(rk);
@@ -1470,6 +1495,7 @@ function renderRec(){
     <div class="meta">${S.recNew?'Sin guardar todavía':`Creado por ${esc(who(d.creadoPor)||'—')} · última edición ${esc(fwhen(d.updatedAt))} por ${esc(who(d.editadoPor)||'—')}`}</div></div>
     <div class="rec-acts"><button class="btn-g" id="rc-back">← Volver</button>${S.recNew?'':'<button class="btn-g" id="rc-print">Imprimir</button><button class="btn-d" id="rc-del">Eliminar</button>'}<button class="btn-p" id="rc-save">Guardar</button></div></div>
     ${extra}<section class="sec"><div class="body"><div class="grid">${R.f.map(f=>recField(f,d)).join('')}</div></div></section>
+    ${ADJ_TIPOS[S.recK]?`<section class="sec"><header><h3>Documentación adjunta</h3></header><div class="body" id="adj-box">${adjHTML()}</div></section>`:''}
     <section class="sec"><header><h3>Firmas</h3></header><div class="body" id="rec-sigs">${recSigHTML()}</div></section>`;
   recLock();
   $('#rc-back').onclick=()=>{ if (S.recDirty){ const b=$('#rc-back'); if (!b.dataset.armed){ b.dataset.armed=1; b.textContent='Descartar cambios'; return; } } S.recDirty=false; go(S.prevRoute||COL2R[R.c]); };
@@ -1658,8 +1684,8 @@ function renderTab(rk){
 function fillDyn(){
   const per=colRows('per').filter(d=>d.estado!=='Baja'); const veh=colRows('veh').filter(d=>d.estado!=='Baja');
   const dp=$('#dl-pers'), dv=$('#dl-veh');
-  if (per.length && dp) dp.innerHTML=per.sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre))).map(p=>`<option value="${esc(p.nombre)}">${esc(p.cargo||'')}</option>`).join('');
-  if (veh.length && dv) dv.innerHTML=veh.map(v=>`<option value="${esc(v.nro)}">${esc((v.categoria||'')+' · '+(v.modelo||'')+' · '+(v.dominio||''))}</option>`).join('');
+  if (per.length && dp) dp.innerHTML=per.sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre))).map(p=>`<option value="${esc(p.nombre)}">${esc((p.cargo||'')+vencTxt(p,VENC_PER))}</option>`).join('');
+  if (veh.length && dv) dv.innerHTML=veh.map(v=>`<option value="${esc(v.nro)}">${esc((v.categoria||'')+' · '+(v.modelo||'')+' · '+(v.dominio||'')+vencTxt(v,VENC_VEH))}</option>`).join('');
   for (const v of veh) vehMap[v.nro]={...(vehMap[v.nro]||{}), nro:v.nro, cat:v.categoria, mod:v.modelo, dom:v.dominio, km:num(v.km)||vehMap[v.nro]?.km||0};
 }
 function fillLists(){
@@ -1957,6 +1983,165 @@ if (draft && draft.cur && draft.sid){
 }
 go((location.hash||'#inicio').slice(1));
 connect();
+/* ===== aviso de vencimientos al elegir persona o unidad (se puede elegir igual) ===== */
+var VENC_PER=[['vCarnet','Carnet'],['vExamen','Examen médico'],['vMD','Manejo defensivo']];
+var VENC_VEH=[['vSeguro','Seguro'],['vVTV','VTV / RTO']];
+function vencLista(d, campos){ const out=[]; for (const [k,l] of campos){ const dd=dayDiff(d[k]); if (dd!=null && dd<=30) out.push({l, d:dd}); } return out; }
+function vencTxt(d, campos){ const v=vencLista(d,campos).filter(x=>x.d<0); return v.length ? ' · ⚠ VENCIDO: '+v.map(x=>x.l).join(', ') : ''; }
+function vencDe(list, val){
+  val=String(val||'').trim().toLowerCase(); if (!val) return [];
+  const per=list==='dl-pers';
+  const d=colRows(per?'per':'veh').find(x=>String(per?x.nombre:x.nro).trim().toLowerCase()===val);
+  return d ? vencLista(d, per?VENC_PER:VENC_VEH) : [];
+}
+function marcarVenc(el){
+  const items=vencDe(el.getAttribute('list'), el.value);
+  let w=el.nextElementSibling; if (!(w && w.classList.contains('venc-warn'))) w=null;
+  if (!items.length){ if (w) w.remove(); return; }
+  const key=items.map(x=>x.l+x.d).join('|');
+  if (w && w.dataset.k===key) return;
+  if (!w){ w=document.createElement('div'); w.className='venc-warn'; el.insertAdjacentElement('afterend', w); }
+  w.dataset.k=key;
+  w.innerHTML=items.map(x=>`<span class="pill ${x.d<0?'p-bad':'p-pend'}">${x.d<0?'Vencido':(x.d===0?'Vence hoy':'Vence en '+x.d+' d')}</span> ${esc(x.l)}`).join(' &nbsp; ');
+}
+function marcarTodos(){ document.querySelectorAll('input[list="dl-pers"],input[list="dl-veh"]').forEach(marcarVenc); }
+document.addEventListener('input', e=>{ const el=e.target; if (el.matches && el.matches('input[list="dl-pers"],input[list="dl-veh"]')) marcarVenc(el); });
+let _vencT=0; new MutationObserver(()=>{ clearTimeout(_vencT); _vencT=setTimeout(marcarTodos,200); }).observe(document.body,{childList:true,subtree:true});
+
+/* ===== documentación adjunta en Legajos y Flota =====
+   Foto (cámara), archivo (PDF o imagen, arrastrando o eligiendo) o enlace (SharePoint).
+   El archivo se guarda en Firestore en partes (colección "adjuntos/{id}/p"), primero en el equipo para que funcione sin señal. */
+const ADJ_TIPOS = {
+  personal: ['Carnet de conducir','Examen médico','Manejo defensivo','Certificado / curso','Otro'],
+  flota:    ['Seguro','VTV / RTO','Cédula / título','Habilitación / permiso','Otro'],
+};
+const ADJ_MAX = 6*1024*1024, ADJ_PARTE = 700000;
+const IDB_ADJ = (()=>{ let p;
+  const open=()=> p = p || new Promise((res,rej)=>{ try { const r=indexedDB.open('sgi-cwl-adj',1); r.onupgradeneeded=()=>r.result.createObjectStore('a',{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); } catch(e){ rej(e); } });
+  const tx=(mode,fn)=>open().then(db=>new Promise((res,rej)=>{ const t=db.transaction('a',mode), req=fn(t.objectStore('a')); t.oncomplete=()=>res(req?req.result:undefined); t.onerror=()=>rej(t.error); }));
+  return { put:o=>tx('readwrite',s=>{ s.put(o); }), get:id=>tx('readonly',s=>s.get(id)), all:()=>tx('readonly',s=>s.getAll()) };
+})();
+const ADJ_MEM = {};
+const kb = n => n>1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB';
+function adjHTML(){
+  const tipos=ADJ_TIPOS[S.recK]||[], list=S.rec.adj||[], ro=S.canWrite===false;
+  const items = list.length ? `<div class="adj-list">${list.map((a,i)=>`<div class="adj-it">
+      <div class="ic">${a.th?`<img src="${a.th}" alt="">`:(a.url?'LINK':/pdf/.test(a.mime||'')?'PDF':'ARCH')}</div>
+      <div class="tx"><b title="${esc(a.nombre||'')}">${esc(a.tipo||'Documento')}</b><small>${esc(a.nombre||a.url||'')}</small><br><small>${esc(fdate(String(a.at||'').slice(0,10)))}${a.size?' · '+kb(a.size):''}</small></div>
+      <div><button type="button" data-adj-ver="${i}">Ver</button>${ro?'':`<button type="button" class="x" data-adj-del="${i}" title="Quitar">✕</button>`}</div></div>`).join('')}</div>`
+    : '<p class="hint" style="margin:0">Todavía no hay documentos adjuntos.</p>';
+  if (ro) return items;
+  return `<div class="adj-drop" id="adj-drop">Arrastrá acá una foto o un PDF (o un enlace de SharePoint)
+      <div class="adj-row"><select id="adj-tipo" aria-label="Tipo de documento">${tipos.map(t=>`<option ${t===S.adjTipo?'selected':''}>${esc(t)}</option>`).join('')}</select>
+      <label class="adj-btn">📷 Sacar foto<input type="file" accept="image/*" capture="environment" data-adj-file></label>
+      <label class="adj-btn">📎 Elegir archivo<input type="file" accept="image/*,application/pdf" data-adj-file></label></div>
+      <div class="adj-link"><input id="adj-url" type="url" placeholder="o pegá el enlace de SharePoint / OneDrive"><button type="button" class="adj-btn" id="adj-url-add">Agregar enlace</button></div>
+    </div>${items}<p class="hint" style="margin:8px 0 0">Las fotos se achican antes de guardarse. PDF hasta 6 MB. Tocá <b>Guardar</b> para confirmar los cambios.</p>`;
+}
+function adjRefresh(){ const b=$('#adj-box'); if (b) b.innerHTML=adjHTML(); }
+function adjPush(a){ S.rec.adj=[...(S.rec.adj||[]), a]; S.recDirty=true; adjRefresh(); toast('Documento agregado · tocá Guardar'); }
+const readURL = f => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(f); });
+async function adjFile(file){
+  if (!file) return;
+  const tipo=$('#adj-tipo')?.value||'Documento';
+  const isImg=/^image\//.test(file.type||''), isPdf=/pdf/.test(file.type||'') || /\.pdf$/i.test(file.name||'');
+  if (!isImg && !isPdf){ toast('Solo fotos o PDF'); return; }
+  if (!isImg && file.size>ADJ_MAX){ toast('El PDF supera los 6 MB. Pegá el enlace de SharePoint en su lugar.'); return; }
+  toast('Procesando…');
+  try {
+    let data, th='';
+    if (isImg){ const im=await loadImg(file); data=shrink(im, 1600, 0.7); th=shrink(im, 160, 0.6); }
+    else data=await readURL(file);
+    const id='a'+uid(), at=new Date().toISOString(), size=Math.round(data.length*0.75);
+    const meta={id, tipo, nombre:file.name||(tipo+'.jpg'), mime:isImg?'image/jpeg':(file.type||'application/pdf'), size, at, by:S.uid||null, byName:S.myName||'', th};
+    try { await IDB_ADJ.put({...meta, data, col:REG[S.recK].c, rec:S.recId, up:0}); } catch(e){ ADJ_MEM[id]=data; }
+    adjPush(meta); subirAdj();
+  } catch(e){ console.warn(e); toast('No se pudo leer el archivo'); }
+}
+function adjUrl(u){
+  u=String(u||'').trim(); if (!/^https?:\/\//i.test(u)){ toast('Pegá un enlace que empiece con https://'); return; }
+  const tipo=$('#adj-tipo')?.value||'Documento';
+  let nombre=''; try { const x=new URL(u); nombre=decodeURIComponent(x.pathname.split('/').filter(Boolean).pop()||x.hostname); } catch(e){}
+  adjPush({id:'a'+uid(), tipo, url:u, nombre:nombre.slice(0,80)||'Enlace', at:new Date().toISOString(), by:S.uid||null, byName:S.myName||''});
+}
+let subiendoAdj=false;
+async function subirAdj(){
+  if (subiendoAdj || !S.db || !navigator.onLine) return; subiendoAdj=true;
+  try { for (const a of await IDB_ADJ.all()) if (!a.up){
+    const n=Math.ceil(a.data.length/ADJ_PARTE);
+    for (let i=0;i<n;i++) await S.db.doc(`adjuntos/${a.id}/p/${i}`).set({d:a.data.slice(i*ADJ_PARTE,(i+1)*ADJ_PARTE)});
+    await S.db.doc('adjuntos/'+a.id).set({n, mime:a.mime, nombre:a.nombre, tipo:a.tipo, col:a.col, rec:a.rec, at:a.at, by:a.by||null, byName:a.byName||''});
+    a.up=1; await IDB_ADJ.put(a);
+  } } catch(e){ console.warn('[SGI] adjuntos', e); }
+  subiendoAdj=false;
+}
+addEventListener('online', ()=>setTimeout(subirAdj, 2000));
+setInterval(subirAdj, 60000);
+setTimeout(subirAdj, 9000);
+async function adjData(a){
+  if (ADJ_MEM[a.id]) return ADJ_MEM[a.id];
+  try { const x=await IDB_ADJ.get(a.id); if (x&&x.data) return x.data; } catch(e){}
+  if (!S.db) return null;
+  try { const h=await S.db.doc('adjuntos/'+a.id).get(); if (!h.exists) return null;
+    const n=h.data().n||0, parts=await Promise.all(Array.from({length:n},(_,i)=>S.db.doc(`adjuntos/${a.id}/p/${i}`).get()));
+    const d=parts.map(p=>p.exists?p.data().d:'').join(''); if (d) ADJ_MEM[a.id]=d; return d||null; } catch(e){ return null; }
+}
+function dataToBlob(d){ const [h,b]=d.split(','); const mime=(h.match(/data:([^;]+)/)||[])[1]||'application/octet-stream'; const bin=atob(b), u=new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); }
+async function adjVer(a){
+  if (a.url){ window.open(a.url,'_blank','noopener'); return; }
+  let m=$('#adjm');
+  if (!m){ document.body.insertAdjacentHTML('beforeend', `<div class="ovl" id="adjm" hidden role="dialog" aria-modal="true" aria-label="Documento adjunto"><div class="ovl-box"><h3 id="adjm-h"></h3><div id="adjm-b"></div><div class="acts"><a class="adj-btn" id="adjm-o" target="_blank" rel="noopener" hidden>Abrir</a><a class="adj-btn" id="adjm-d" hidden>Descargar</a><button type="button" class="adj-btn" id="adjm-x">Cerrar</button></div></div></div>`); m=$('#adjm'); $('#adjm-x').onclick=()=>{ m.hidden=true; }; m.onclick=e=>{ if (e.target===m) m.hidden=true; }; }
+  $('#adjm-h').textContent=(a.tipo||'Documento')+' · '+(a.nombre||''); $('#adjm-b').innerHTML='<p class="hint">Cargando…</p>'; $('#adjm-o').hidden=$('#adjm-d').hidden=true; m.hidden=false;
+  const d=await adjData(a);
+  if (!d){ $('#adjm-b').innerHTML='<p class="hint">El archivo todavía no se subió desde el equipo que lo cargó, o no hay conexión.</p>'; return; }
+  const url=URL.createObjectURL(dataToBlob(d));
+  $('#adjm-b').innerHTML = /^data:image/.test(d) ? `<img src="${url}" alt="${esc(a.tipo||'')}">` : '<p class="hint">Documento PDF listo. Tocá <b>Abrir</b> para verlo.</p>';
+  const o=$('#adjm-o'), dl=$('#adjm-d'); o.href=url; o.hidden=false; dl.href=url; dl.download=a.nombre||'documento'; dl.hidden=false;
+}
+$('#v-rec').addEventListener('change', e=>{ const el=e.target; if (el.id==='adj-tipo') S.adjTipo=el.value; if (el.matches && el.matches('[data-adj-file]')){ const f=el.files&&el.files[0]; el.value=''; adjFile(f); } });
+$('#v-rec').addEventListener('click', e=>{
+  const v=e.target.closest('[data-adj-ver]'); if (v){ const a=(S.rec.adj||[])[+v.dataset.adjVer]; if (a) adjVer(a); return; }
+  const x=e.target.closest('[data-adj-del]'); if (x){ if (!x.dataset.armed){ x.dataset.armed=1; x.textContent='¿Quitar?'; setTimeout(()=>{ if (x.isConnected){ delete x.dataset.armed; x.textContent='✕'; } },3500); return; }
+    const i=+x.dataset.adjDel; const a=(S.rec.adj||[])[i]; S.rec.adj=(S.rec.adj||[]).filter((_,j)=>j!==i); S.recDirty=true; adjRefresh();
+    if (a && !a.url && S.db) S.db.doc('adjuntos/'+a.id).get().then(h=>{ const n=h.exists?(h.data().n||0):0; for (let k=0;k<n;k++) S.db.doc(`adjuntos/${a.id}/p/${k}`).delete().catch(()=>{}); S.db.doc('adjuntos/'+a.id).delete().catch(()=>{}); }).catch(()=>{});
+    toast('Documento quitado · tocá Guardar'); return; }
+  if (e.target.closest('#adj-url-add')) adjUrl($('#adj-url')?.value);
+});
+$('#v-rec').addEventListener('dragover', e=>{ const z=e.target.closest('#adj-drop'); if (!z) return; e.preventDefault(); z.classList.add('on'); });
+$('#v-rec').addEventListener('dragleave', e=>{ const z=e.target.closest('#adj-drop'); if (z && !z.contains(e.relatedTarget)) z.classList.remove('on'); });
+$('#v-rec').addEventListener('drop', e=>{ const z=e.target.closest('#adj-drop'); if (!z) return; e.preventDefault(); z.classList.remove('on');
+  const fs=[...(e.dataTransfer.files||[])];
+  if (fs.length){ (async()=>{ for (const f of fs) await adjFile(f); })(); return; }
+  const u=(e.dataTransfer.getData('text/uri-list')||e.dataTransfer.getData('text/plain')||'').split('\n').find(x=>/^https?:/i.test(x.trim()));
+  if (u) adjUrl(u); else toast('Arrastrá un archivo o un enlace');
+});
+
+/* ===== avisos por correo: a quién y con cuánta anticipación (lo lee el script de Google que envía los correos) ===== */
+async function abrirAvisos(){
+  let m=$('#avm');
+  if (!m){ document.body.insertAdjacentHTML('beforeend', `<div class="ovl" id="avm" hidden role="dialog" aria-modal="true" aria-label="Avisos por correo"><div class="ovl-box">
+      <h3>Avisos de vencimiento por correo</h3>
+      <p class="hint" style="margin:0">Se avisa de carnets, exámenes médicos, manejo defensivo, seguros y VTV vencidos o por vencer. Los correos los envía el script diario configurado en Google.</p>
+      <label class="f"><span>Enviar a (un correo por línea)</span><textarea id="avm-em" placeholder="nombre@cwl.com.ar"></textarea></label>
+      <label class="f"><span>Avisar con anticipación (días)</span><input id="avm-d" type="number" min="1" max="120" inputmode="numeric"></label>
+      <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="avm-on" style="width:auto"> Avisos activados</label>
+      <p class="hint" id="avm-s" style="margin:0"></p>
+      <div class="acts"><button type="button" class="btn-g" id="avm-x">Cancelar</button><button type="button" class="btn-p" id="avm-ok">Guardar</button></div></div></div>`);
+    m=$('#avm'); $('#avm-x').onclick=()=>{ m.hidden=true; };
+    $('#avm-ok').onclick=()=>{
+      if (S.canWrite===false) return toast('Tu acceso es de solo lectura');
+      const emails=$('#avm-em').value.split(/[\s,;]+/).map(x=>x.trim().toLowerCase()).filter(Boolean);
+      const bad=emails.filter(x=>!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)); if (bad.length) return toast('Revisá: '+bad.join(', '));
+      const dias=Math.min(120,Math.max(1,parseInt($('#avm-d').value,10)||30));
+      enqueue({op:'set', path:'config/avisos', data:{emails, dias, activo:$('#avm-on').checked, updatedAt:new Date().toISOString(), editadoPor:S.uid||null}});
+      m.hidden=true; toast('Configuración de avisos guardada');
+    };
+  }
+  $('#avm-em').value=''; $('#avm-d').value=30; $('#avm-on').checked=true; $('#avm-s').textContent=''; m.hidden=false;
+  if (!S.db){ $('#avm-s').textContent='Sin conexión a la base: los avisos se configuran estando conectado.'; return; }
+  try { const d=await S.db.doc('config/avisos').get(); if (d.exists){ const c=d.data(); $('#avm-em').value=(c.emails||[]).join('\n'); $('#avm-d').value=c.dias||30; $('#avm-on').checked=c.activo!==false; } } catch(e){}
+}
+
 </script>
 
 <script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
