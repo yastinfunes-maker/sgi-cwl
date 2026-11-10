@@ -111,6 +111,12 @@ tbody tr.click{cursor:pointer} tbody tr.click:hover{background:var(--surface-2)}
 .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .sheets{display:flex;gap:0;overflow-x:auto;border-bottom:2px solid var(--accent);margin-bottom:14px;scrollbar-width:thin}
 .sheets button{flex:none;border:1px solid var(--line);border-bottom:0;border-radius:6px 6px 0 0;margin-right:-1px;background:var(--surface-2);color:var(--ink-2);font:600 12.5px var(--display);letter-spacing:.02em;padding:7px 11px 6px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.subtabs button{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);font:600 13.5px var(--display);padding:9px 14px;border-radius:999px;cursor:pointer}
+.subtabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.subtabs .sub-b{font:500 12px var(--mono);background:var(--amber-soft);color:var(--amber);border-radius:999px;padding:2px 8px}
+.subtabs .sub-b.ok{background:var(--ok-soft);color:var(--ok)}
+.sub-next{display:flex;justify-content:flex-end;margin:4px 0 14px}
 .sheets button i{width:7px;height:7px;border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);flex:none}
 .sheets button.has i{background:var(--ok);box-shadow:none}
 .sheets button.pend i{background:var(--amber);box-shadow:none}
@@ -659,7 +665,8 @@ const FOTO_MIN = 1;
 /* Herramientas de perfil: cada una que se use en el servicio exige FOTOS_POR_HTA fotos propias en el Check list WL.
    HTA_POR_SERV: qué herramientas se exigen solas según el servicio de la carátula (el operador puede sumar otras). */
 const FOTOS_POR_HTA = 3;
-const HTAS_PERFIL = ['CCL punzado','CCL Gamma Ray','RBT','CBL','Free point','MAC','Gyro'];
+const HTAS_PERFIL = ['CCL punzado','CCL Gamma Ray','RBT','CBL','Free point','MAC','Gyro','IQ'];
+{ const g=T.chkWL.find(g=>g.t==='Perfil'); if (g && !g.i.includes('IQ')) g.i.push('IQ'); }
 const HTA_POR_SERV = { PUN:['CCL punzado'], PZA:['CCL punzado'], TCP:['CCL punzado'], ATP:['CCL punzado'], ARC:['CCL punzado'],
   CCG:['CCL Gamma Ray'], BCG:['CBL','CCL Gamma Ray'], CBC:['CBL'], RBC:['RBT'], RCG:['RBT','CCL Gamma Ray'], GYR:['Gyro'], MAC:['MAC'], PLI:['Free point'] };
 const GATE = { chk:'chkwl', key:'0', tabs:['tiempo','cartaz','hts'], sec:'Datos a completar en el pozo' };
@@ -685,9 +692,10 @@ const TABS = [
   secs: c => [
    {s:'f', t:'Unidad', f:[F('unidad','Unidad de wireline','dl',{ls:'dl-veh',def:(c.vehiculos||[])[0]?.nro||''}), F('hskm','Hs y km')]},
    {s:'chk', k:'it', t:'Verificación de equipos', groups:T.chkWL.map(g=>({t:g.t.replace('Documetacion','Documentación').replace('Contol','Control'), i:g.i})), st:['OK','Falta','N/A'], q:['Canasta Calibradora','Taponera # 20','taponera # 10','Primario','Secundario','Carga de Poder','Calibre','Cortador','Cabeza de disparo','Intermedios','Fondos','Cañones','Detonadores']},
-   {s:'fotos', t:'Fotos del chequeo', min:FOTO_MIN, perfil:true},
-   {s:'sig', items:['Nombre y firma pre-operación','Nombre y firma post-operación']},
-  ]},
+   {s:'fotos', t:'Fotos del chequeo', min:FOTO_MIN, perfil:true, pg:'ff'},
+   {s:'sig', items:['Nombre y firma pre-operación','Nombre y firma post-operación'], pg:'ff'},
+  ],
+  pages:[['chk','Verificación de equipos'],['ff','Fotos y firmas']]},
 
  {k:'chkliv', t:'Check list F. liviana', title:'Inspección vehicular', code:'F01 PHSE-07 Rev.01',
   secs: c => [
@@ -1132,7 +1140,8 @@ function renderTabBody(){
   SECS = t.secs(c); S.calcs=[];
   $('#tab-body').innerHTML = `<div class="sheet-head"><h2>${esc(t.title)}</h2><span class="code">${esc(t.code||'')}</span></div>
     ${t.noStrip?'':`<div class="strip">${fcar(c).map(([l,v])=>`<div><div class="l">${l}</div><div class="v">${esc(v||'—')}</div></div>`).join('')}</div>`}
-    ${SECS.map(secHTML).join('')}`;
+    ${t.pages?subNavHTML(t):''}${SECS.map(secHTML).join('')}${t.pages?subNextHTML(t):''}`;
+  if (t.pages){ const pg=curPage(t); SECS.forEach((s,i)=>{ const el=$('#sec-'+i); if (el) el.hidden=(s.pg||t.pages[0][0])!==pg; }); }
   updateCalcs(); postRender();
 }
 function validateNro(){
@@ -1867,10 +1876,27 @@ function postRender(){
       : `<p class="gate">Este checklist es obligatorio: hasta que tenga sus fotos y la firma pre-operación, no se habilitan la salida a locación, el Reporte de Tiempo, la Carta Z ni el Reporte de Hts.</p>`);
   }
 }
+/* ----- pestañas internas de una hoja (Check list WL: verificación / fotos y firmas) ----- */
+S.sub={};
+const curPage = t => { const p=S.sub[t.k]; return t.pages.some(x=>x[0]===p) ? p : t.pages[0][0]; };
+function subNavHTML(t){
+  const pg=curPage(t), fc=fotoCheck(S.cur,SECS), sg=sigState(S.cur,SECS);
+  const badge = k => k==='ff' ? `<span class="sub-b ${fc.ok&&sg.ok?'ok':''}">📷 ${fc.have}/${fc.need||0} · ✍ ${sg.n}/${sg.tot}</span>` : '';
+  return `<nav class="subtabs" role="tablist" aria-label="Partes de la hoja" data-keep>${t.pages.map(([k,l])=>`<button type="button" role="tab" data-sub="${k}" aria-selected="${k===pg}" data-keep>${esc(l)}${badge(k)}</button>`).join('')}</nav>`;
+}
+function subNextHTML(t){
+  const pg=curPage(t), i=t.pages.findIndex(x=>x[0]===pg), nx=t.pages[i+1];
+  return nx ? `<div class="sub-next" data-keep><button type="button" class="btn-p" data-sub="${nx[0]}" data-keep>Siguiente: ${esc(nx[1])} →</button></div>` : '';
+}
+$('#v-svc').addEventListener('click', e=>{
+  const b=e.target.closest('[data-sub]'); if (!b) return;
+  S.sub[S.tab]=b.dataset.sub; rerenderSvc();
+  const st=$('#tab-body .subtabs'); if (st) st.scrollIntoView({block:'start'}); scrollBy(0,-80);
+});
 function rerenderSvc(){ const y=scrollY; renderTabBody(); scrollTo(0,y); }
 $('#v-svc').addEventListener('click', async e=>{
   const g=e.target.closest('[data-goto]');
-  if (g){ if (!guard()) return; loadTab(g.dataset.goto); renderSvcHead(); renderTabBody(); scrollTo(0,0); return; }
+  if (g){ if (!guard()) return; if (g.dataset.goto===GATE.chk) S.sub[GATE.chk]='ff'; loadTab(g.dataset.goto); renderSvcHead(); renderTabBody(); scrollTo(0,0); return; }
   const sg=e.target.closest('[data-sig]');
   if (sg && !sg.disabled){
     const key=sg.dataset.sig, s=SECS.find(x=>x.s==='sig'); const label=s.items[+key];
