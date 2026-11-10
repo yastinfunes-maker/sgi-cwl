@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Usuario logueado y cuyo email figura en la colección "acceso"
+    function habilitado() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/acceso/$(request.auth.token.email.lower()));
+    }
+
+    // Lista de acceso: cada uno solo puede consultar si está habilitado.
+    // Se administra a mano desde la consola de Firebase.
+    match /acceso/{email} {
+      allow get: if request.auth != null && request.auth.token.email.lower() == email;
+      allow list, write: if false;
+    }
+
+    // Perfil de cada usuario (nombre, último ingreso)
+    match /usuarios/{uid} {
+      allow read: if habilitado();
+      allow write: if habilitado() && request.auth.uid == uid;
+    }
+
+    // Datos del SGI: job papers (con sus hojas), NC, auditorías, documentos,
+    // incidentes, personal, vehículos, capacitaciones, horas hombre y fotos
+    match /{col}/{resto=**} {
+      allow read, write: if habilitado()
+        && col in ['servicios', 'nc', 'aud', 'doc', 'inc', 'per', 'veh', 'cap', 'hh', 'fotos'];
+    }
+  }
+}
