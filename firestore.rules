@@ -23,10 +23,11 @@ service cloud.firestore {
     }
 
     // Datos del SGI: job papers (con sus hojas), NC, auditorías, documentos,
-    // incidentes, personal, vehículos, capacitaciones, horas hombre y fotos
+    // incidentes, personal, vehículos, equipos, herramientas, capacitaciones, horas hombre,
+    // fotos y archivos adjuntos
     match /{col}/{resto=**} {
       allow read, write: if habilitado()
-        && col in ['servicios', 'nc', 'aud', 'doc', 'inc', 'per', 'veh', 'cap', 'hh', 'fotos'];
+        && col in ['servicios', 'nc', 'aud', 'doc', 'inc', 'per', 'veh', 'eqp', 'hta', 'cap', 'hh', 'fotos', 'adjuntos'];
     }
   }
 }

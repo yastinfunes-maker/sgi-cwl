@@ -374,6 +374,12 @@ header.top .wrap{gap:12px}
 .adj-it .x{color:var(--bad)}
 .adj-link{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .adj-link input{flex:1;min-width:200px}
+.autofill{background:var(--ok-soft);border:1px solid var(--ok);color:var(--ink);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13.5px;line-height:1.45}
+.autofill.warn{background:var(--amber-soft);border-color:var(--amber)}
+.autofill .af-diff{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.autofill .adj-btn{padding:5px 10px;margin-left:6px;font-size:12.5px;background:var(--surface)}
+.grid .af{background:var(--ok-soft)!important;border-color:var(--ok)!important}
+.adj-drop small{color:var(--ink-3)}
 #adjm img{max-width:100%;max-height:70dvh;object-fit:contain;align-self:center}
 #avm textarea{width:100%;box-sizing:border-box;min-height:110px;font:14px system-ui;padding:8px;border-radius:6px;border:1px solid var(--line,#c9d3d1);background:var(--surface);color:var(--ink)}
 #avm input{font:14px system-ui;padding:8px;border-radius:6px;border:1px solid var(--line,#c9d3d1);background:var(--surface);color:var(--ink);width:90px}
@@ -387,6 +393,8 @@ header.top .wrap{gap:12px}
   <a class="nv" href="#jobpapers" data-r="jobpapers"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8 11h8M8 15h5"/></svg><div><b>Job Papers</b><small>Carga de servicios WL</small></div></a>
   <a class="nv" href="#control" data-r="control"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-5M12 16V8M16 16v-3"/></svg><div><b>Control de gestión</b><small>Tableros e indicadores</small></div></a>
   <a class="nv" href="#flota" data-r="flota"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><div><b>Flota</b><small>Unidades y vencimientos</small></div></a>
+  <a class="nv" href="#equipos" data-r="equipos"><svg viewBox="0 0 24 24"><path d="M14 7l3-3 3 3-3 3zM4 20l9-9M8 6l10 10"/></svg><div><b>Equipos</b><small>Certificaciones y vencimientos</small></div></a>
+  <a class="nv" href="#herramientas" data-r="herramientas"><svg viewBox="0 0 24 24"><path d="M14.5 5.5a4 4 0 0 0-5 5L4 16l4 4 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2.5-.5-.5-2.5z"/></svg><div><b>Herramientas</b><small>Codificadas y calibraciones</small></div></a>
   <div class="sb-grp">Calidad / SGI</div>
   <a class="nv" href="#nc" data-r="nc"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg><div><b>No conformidades</b><small>Hallazgos y acciones</small></div></a>
   <a class="nv" href="#auditorias" data-r="auditorias"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/></svg><div><b>Auditorías internas</b><small>Programa y resultados</small></div></a>
@@ -584,7 +592,7 @@ async function connect(){
       const n={}; for (const d of snap.docs) n[d.id]=d.data();
       S.rsvc=n; persist(); rebuild(); syncUI(); if (S.live) flush(); refresh(true);
     }, err=>{ clearTimeout(timer); S.live=false; syncUI(); if (err&&err.code==='revoked') banner('Se retiró el acceso a la base compartida.', 'warn'); });
-    for (const c of ['nc','aud','doc','inc','per','veh','cap','hh']) db.collection(c).onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.rcol[c]=n; persist(); rebuild(); if (c==='per'||c==='veh') fillDyn(); refresh(true); }, ()=>{});
+    for (const c of ['nc','aud','doc','inc','per','veh','eqp','hta','cap','hh']) db.collection(c).onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.rcol[c]=n; persist(); rebuild(); if (c==='per'||c==='veh') fillDyn(); refresh(true); }, ()=>{});
     if (S.sid) watchHojas(S.sid);
   } catch(e){ clearTimeout(timer); syncUI(); }
 }
@@ -1386,11 +1394,11 @@ const REG = {
        F('auditor','Auditor','dl',{ls:'dl-pers'}), F('auditados','Auditados','tx',{span:'c2'}), F('estado','Estado','sel',{o:['Planificada','Realizada','Reprogramada','Cancelada'],def:'Planificada'}),
        F('nNC','No conformidades','nm'), F('nObs','Observaciones','nm'), F('nOM','Oportunidades de mejora','nm'), F('alcance','Alcance','ar',{span:'c2'}), F('concl','Conclusiones','ar',{span:'c2'})],
     cols:['nro','proceso','norma','fplan','freal','auditor','nNC','estado']},
-  documentos: {c:'doc', t:'Documentos del sistema', one:'documento', nueva:'+ Nuevo documento', code:'Listado maestro de documentos', sub:'Procedimientos, formularios e instructivos vigentes', st:'estado', open:['En revisión'],
+  documentos: {c:'doc', t:'Documentos del sistema', one:'documento', art:'Nuevo', nueva:'+ Nuevo documento', code:'Listado maestro de documentos', sub:'Procedimientos, formularios e instructivos vigentes', st:'estado', open:['En revisión'],
     f:[F('codigo','Código','tx',{req:1}), F('titulo','Título','tx',{req:1,span:'c2'}), F('tipo','Tipo','sel',{o:['Manual','Política','Procedimiento general','Procedimiento operativo','Instructivo','Formulario','Registro externo']}), F('rev','Revisión'), F('fecha','Fecha de revisión','dt'), F('prox','Próxima revisión','dt',{venc:1}),
        F('resp','Responsable','dl',{ls:'dl-pers'}), F('estado','Estado','sel',{o:['Vigente','En revisión','Obsoleto'],def:'Vigente'}), F('url','Ubicación / enlace al archivo','tx',{span:'c2'}), F('obs','Cambios de la revisión','ar',{span:'c4'})],
     cols:['codigo','titulo','tipo','rev','fecha','prox','estado']},
-  incidentes: {c:'inc', t:'Incidentes HSE', one:'incidente', nueva:'+ Nuevo incidente', pre:'IN', code:'Registro de incidentes', sub:'Accidentes, incidentes, casi accidentes, ambientales y vehiculares', st:'estado', open:['Abierto','En investigación'],
+  incidentes: {c:'inc', t:'Incidentes HSE', one:'incidente', art:'Nuevo', nueva:'+ Nuevo incidente', pre:'IN', code:'Registro de incidentes', sub:'Accidentes, incidentes, casi accidentes, ambientales y vehiculares', st:'estado', open:['Abierto','En investigación'],
     f:[F('nro','Nº','tx',{auto:1}), F('fecha','Fecha','dt',{req:1,def:()=>today()}), F('hora','Hora','tm'), F('tipo','Tipo','sel',{req:1,o:['Accidente con baja','Accidente sin baja','Incidente','Casi accidente','Ambiental','Vehicular','Daño material']}),
        F('sev','Severidad potencial','sel',{o:['Baja','Media','Alta']}), F('servicio','Nº de servicio (job paper)'), F('lugar','Lugar / pozo'), F('compania','Compañía / cliente','dl',{ls:'dl-comp'}),
        F('desc','Descripción de lo ocurrido','ar',{span:'c4',req:1}), F('pers','Personas involucradas','tx',{span:'c2'}), F('dias','Días perdidos','nm'), F('estado','Estado','sel',{o:['Abierto','En investigación','Cerrado'],def:'Abierto'}),
@@ -1405,6 +1413,18 @@ const REG = {
     f:[F('nro','Nº de unidad','tx',{req:1}), F('categoria','Categoría','sel',{o:['Pesados','Livianos']}), F('modelo','Marca y modelo','tx',{span:'c2'}), F('dominio','Dominio'), F('km','Km (último registro)','nm'), F('hs','Horas motor','nm'),
        F('estado','Estado','sel',{o:['Base','Pozo','Mantenimiento','Baja'],def:'Base'}), F('vSeguro','Vencimiento seguro','dt',{venc:1}), F('vVTV','Vencimiento VTV / RTO','dt',{venc:1}), F('obs','Observaciones','ar',{span:'c4'})],
     cols:['nro','categoria','modelo','dominio','km','estado','vSeguro','vVTV'], noVencIf:d=>d.estado==='Baja'},
+  equipos: {c:'eqp', t:'Equipos', one:'equipo', art:'Nuevo', nueva:'+ Nuevo equipo', code:'Registro de equipos y certificaciones', sub:'Equipos de control de presión, izaje y superficie con certificación y vencimiento', st:'estado',
+    f:[F('codigo','Código / Nº interno','tx',{req:1}), F('desc','Descripción','tx',{req:1,span:'c2'}), F('categoria','Categoría','sel',{o:['Control de presión','Izaje y montaje','Unidad de superficie / guinche','Medición y seguridad','Eléctrico / generación','Otro']}),
+       F('marca','Marca / fabricante'), F('modelo','Modelo'), F('serie','Nº de serie'), F('wp','Presión de trabajo / capacidad'),
+       F('unidad','Unidad asignada','dl',{ls:'dl-veh'}), F('informe','Nº de certificado / informe'), F('certificador','Empresa certificadora','tx',{span:'c2'}),
+       F('fCert','Fecha de certificación','dt'), F('vCert','Vencimiento certificación','dt',{venc:1}), F('estado','Estado','sel',{o:['Base','Pozo','Reparación','Fuera de servicio','Baja'],def:'Base'}), F('obs','Observaciones','ar',{span:'c4'})],
+    cols:['codigo','desc','categoria','serie','informe','vCert','estado'], noVencIf:d=>['Baja','Fuera de servicio'].includes(d.estado)},
+  herramientas: {c:'hta', t:'Herramientas', one:'herramienta', nueva:'+ Nueva herramienta', code:'Registro de herramientas codificadas', sub:'Herramientas de fondo y de mano codificadas, con calibración / certificación y vencimiento', st:'estado',
+    f:[F('codigo','Código','tx',{req:1}), F('desc','Descripción','tx',{req:1,span:'c2'}), F('tipo','Tipo','sel',{o:['Perfil','Punzado','Fijado de tapón','Corte de cañería','Cuerda explosiva','Dump bailer','Pesca','Mano / taller','Sistema operativo / electrónica','Otro']}),
+       F('marca','Marca / fabricante'), F('modelo','Modelo'), F('serie','Nº de serie'), F('od','Diámetro (OD)'),
+       F('wp','Presión / temperatura máx.'), F('informe','Nº de certificado / calibración'), F('certificador','Certificó / calibró','tx',{span:'c2'}),
+       F('fCert','Fecha de certificación / calibración','dt'), F('vCert','Vencimiento certificación','dt',{venc:1}), F('estado','Estado','sel',{o:['Base','Pozo','Reparación','Fuera de servicio','Baja'],def:'Base'}), F('obs','Observaciones','ar',{span:'c4'})],
+    cols:['codigo','desc','tipo','serie','informe','vCert','estado'], noVencIf:d=>['Baja','Fuera de servicio'].includes(d.estado)},
   capacitaciones: {c:'cap', t:'Capacitaciones', one:'capacitación', nueva:'+ Nueva capacitación', pre:'CAP', code:'Registro de capacitación', sub:'Temas, horas y asistentes', st:'tipo',
     f:[F('nro','Nº','tx',{auto:1}), F('fecha','Fecha','dt',{req:1,def:()=>today()}), F('tema','Tema','tx',{req:1,span:'c2'}), F('tipo','Tipo','sel',{o:['Inducción','HSE','Técnica / operativa','Procedimiento','Simulacro','Externa'],def:'HSE'}),
        F('horas','Duración (h)','nm',{req:1}), F('instructor','Instructor','tx'), F('eficacia','Evaluación de eficacia','sel',{o:['Pendiente','Eficaz','No eficaz']}),
@@ -1483,20 +1503,21 @@ function openRec(rk, id){
   const R=REG[rk]; S.recK=rk; S.recId=id||('r'+uid()); S.recNew=!id;
   if (id) S.rec=clone(S.col[R.c][id]);
   else { S.rec={}; for (const f of R.f){ if (f.def!=null) S.rec[f.k]= typeof f.def==='function'?f.def():f.def; } if (R.pre) S.rec.nro=nextNro(R); }
-  S.recDirty=false; S.prevRoute=S.route; show('rec');
+  S.recDirty=false; S.autoInfo=null; S.autoKeys=null; S.prevRoute=S.route; show('rec');
 }
 function renderRec(){
   const R=REG[S.recK], d=S.rec; names([d.creadoPor,d.editadoPor]);
-  const title = S.recNew ? `Nueva ${R.one}` : (d.nro||d.codigo||d.nombre||R.one);
+  const title = S.recNew ? `${R.art||'Nueva'} ${R.one}` : (d.nro||d.codigo||d.nombre||R.one);
   let extra='';
   if (S.recK==='personal' && d.nombre){ const sv=allSvc().filter(s=>persNames(s.c).includes(d.nombre)); const hs=sv.reduce((a,s)=>a+(s.ind?.tiempo?.op||0),0); const cap=colRows('cap').filter(c=>String(c.asist||'').split('\n').map(x=>x.trim()).includes(d.nombre)); extra=`<div class="kvs" style="margin-bottom:14px"><div><div class="l">Servicios (job papers)</div><div class="v">${sv.length}</div></div><div><div class="l">Horas operativas</div><div class="v">${hfmt(hs)}</div></div><div><div class="l">Capacitaciones</div><div class="v">${cap.length}</div></div><div><div class="l">Horas de capacitación</div><div class="v">${fmt(cap.reduce((a,c)=>a+num(c.horas),0),1)}</div></div></div>`; }
   if (S.recK==='flota' && d.nro){ const u=allSvc().flatMap(s=>(s.ind?.caratula?.units||[]).filter(x=>x.n===d.nro)); extra=`<div class="kvs" style="margin-bottom:14px"><div><div class="l">Servicios (job papers)</div><div class="v">${u.length}</div></div><div><div class="l">Km en servicios</div><div class="v">${fmt(u.reduce((a,x)=>a+x.km,0))}</div></div><div><div class="l">Horas motor en servicios</div><div class="v">${fmt(u.reduce((a,x)=>a+x.hs,0),1)}</div></div><div><div class="l">Estado</div><div class="v" style="font-size:14px">${stPill(R,d.estado)}</div></div></div>`; }
   $('#v-rec').innerHTML = `<div class="svc-head"><div><div class="muted small" style="font:600 11px var(--display);letter-spacing:.1em;text-transform:uppercase">${esc(R.t)}</div><div class="nro">${esc(title)}</div>
     <div class="meta">${S.recNew?'Sin guardar todavía':`Creado por ${esc(who(d.creadoPor)||'—')} · última edición ${esc(fwhen(d.updatedAt))} por ${esc(who(d.editadoPor)||'—')}`}</div></div>
     <div class="rec-acts"><button class="btn-g" id="rc-back">← Volver</button>${S.recNew?'':'<button class="btn-g" id="rc-print">Imprimir</button><button class="btn-d" id="rc-del">Eliminar</button>'}<button class="btn-p" id="rc-save">Guardar</button></div></div>
-    ${extra}<section class="sec"><div class="body"><div class="grid">${R.f.map(f=>recField(f,d)).join('')}</div></div></section>
+    ${extra}${ADJ_TIPOS[S.recK]&&AUTO[S.recK]?`<div id="auto-box">${autoHTML()}</div>`:''}<section class="sec"><div class="body"><div class="grid">${R.f.map(f=>recField(f,d)).join('')}</div></div></section>
     ${ADJ_TIPOS[S.recK]?`<section class="sec"><header><h3>Documentación adjunta</h3></header><div class="body" id="adj-box">${adjHTML()}</div></section>`:''}
-    <section class="sec"><header><h3>Firmas</h3></header><div class="body" id="rec-sigs">${recSigHTML()}</div></section>`;
+    ${recSigItems(S.recK, d).length?`<section class="sec"><header><h3>Firmas</h3></header><div class="body" id="rec-sigs">${recSigHTML()}</div></section>`:''}`;
+  if (S.autoKeys) for (const k of S.autoKeys){ const el=$('#rf-'+k); if (el) el.classList.add('af'); }
   recLock();
   $('#rc-back').onclick=()=>{ if (S.recDirty){ const b=$('#rc-back'); if (!b.dataset.armed){ b.dataset.armed=1; b.textContent='Descartar cambios'; return; } } S.recDirty=false; go(S.prevRoute||COL2R[R.c]); };
   $('#rc-save').onclick=saveRec;
@@ -1530,7 +1551,7 @@ function saveRec(stay){
 function recSheet(R,d){
   const cells=R.f.map(f=>[f.l, f.t==='dt'?fdate(d[f.k]):(d[f.k]??'')]);
   const shortC=cells.filter((c,i)=>R.f[i].t!=='ar'), longC=cells.filter((c,i)=>R.f[i].t==='ar');
-  return `<section class="sheet"><table class="hd"><tr><td class="lg" rowspan="2"><img src="${LOGO}" alt="Condor Wireline"></td><td class="ti" rowspan="2">${P(R.code)}</td><td class="cd">${P(d.nro||d.codigo||d.nombre||'')}</td></tr><tr><td class="cd">${P(R.t)}</td></tr></table>${kvTable(shortC,4)}${longC.map(([l,v])=>`<h4>${P(l)}</h4><table><tr><td class="pre" style="min-height:14mm;height:14mm">${P(v)}</td></tr></table>`).join('')}${sigPrint(recSigItems(COL2R[R.c], d), d.firmas)}<div class="ft"><span>SGI Condor Wireline · ${P(R.t)}</span><span>Impreso el ${P(fwhen(new Date().toISOString()))}</span></div></section>`;
+  return `<section class="sheet"><table class="hd"><tr><td class="lg" rowspan="2"><img src="${LOGO}" alt="Condor Wireline"></td><td class="ti" rowspan="2">${P(R.code)}</td><td class="cd">${P(d.nro||d.codigo||d.nombre||'')}</td></tr><tr><td class="cd">${P(R.t)}</td></tr></table>${kvTable(shortC,4)}${longC.map(([l,v])=>`<h4>${P(l)}</h4><table><tr><td class="pre" style="min-height:14mm;height:14mm">${P(v)}</td></tr></table>`).join('')}${recSigItems(COL2R[R.c], d).length?sigPrint(recSigItems(COL2R[R.c], d), d.firmas):''}<div class="ft"><span>SGI Condor Wireline · ${P(R.t)}</span><span>Impreso el ${P(fwhen(new Date().toISOString()))}</span></div></section>`;
 }
 
 /* ----- charts & helpers for dashboards ----- */
@@ -1948,12 +1969,15 @@ async function verFoto(f){
 }
 
 // --- registros (NC, auditorías, capacitaciones, etc.) ---
+// estos registros no llevan firma: son listados con su documentación adjunta
+const SIN_FIRMA = new Set(['documentos','flota','equipos','herramientas']);
 function recSigItems(rk, d){
   if (rk==='capacitaciones'){
     const as=String(d.asist||'').split('\n').map(x=>x.trim()).filter(Boolean);
     return [{key:'instructor', label:'Instructor'+(d.instructor?' · '+d.instructor:''), name:d.instructor||''},
       ...as.map(n=>({key:'a_'+n.replace(/[^\wÁÉÍÓÚÑáéíóúñü ]/g,'').replace(/\s+/g,'_').slice(0,60), label:'Asistente · '+n, name:n}))];
   }
+  if (SIN_FIRMA.has(rk)) return [];
   return [{key:'elaboro', label:'Elaboró', name:''}, {key:'aprobo', label:'Aprobó', name:''}];
 }
 function recSigHTML(){ return sigHTML(recSigItems(S.recK, S.rec), S.rec.firmas); }
@@ -2014,7 +2038,193 @@ let _vencT=0; new MutationObserver(()=>{ clearTimeout(_vencT); _vencT=setTimeout
 const ADJ_TIPOS = {
   personal: ['Carnet de conducir','Examen médico','Manejo defensivo','Certificado / curso','Otro'],
   flota:    ['Seguro','VTV / RTO','Cédula / título','Habilitación / permiso','Otro'],
+  documentos:   ['Documento (PDF)','Versión editable','Registro / anexo','Otro'],
+  equipos:      ['Certificado','Informe de inspección','Prueba hidráulica','Ficha técnica / manual','Otro'],
+  herramientas: ['Certificado / calibración','Informe de inspección','Ficha técnica / manual','Otro'],
 };
+/* ===== autocompletado desde el PDF adjunto =====
+   Al adjuntar un PDF se lee su texto (pdf.js, en el mismo equipo: el archivo no sale a ningún servicio externo)
+   y se completan los campos vacíos con lo que se reconoce. Los PDF escaneados (solo imagen) no tienen texto: ahí se carga a mano. */
+const PDFJS_URL='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/';
+let _pdfjs=null;
+function loadPdfjs(){
+  return _pdfjs = _pdfjs || new Promise((res,rej)=>{
+    if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_URL+'pdf.worker.min.js'; return res(window.pdfjsLib); }
+    const sc=document.createElement('script'); sc.src=PDFJS_URL+'pdf.min.js';
+    sc.onload=()=>{ pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_URL+'pdf.worker.min.js'; res(window.pdfjsLib); };
+    sc.onerror=()=>{ _pdfjs=null; rej(new Error('No se pudo cargar el lector de PDF')); };
+    document.head.appendChild(sc);
+  });
+}
+// texto del PDF en renglones; dos espacios separan columnas ("Etiqueta  Valor")
+async function pdfLines(file, maxPages=4){
+  const lib=await loadPdfjs();
+  const pdf=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  const out=[];
+  for (let p=1;p<=Math.min(pdf.numPages,maxPages);p++){
+    const tc=await (await pdf.getPage(p)).getTextContent(); const rows=[];
+    for (const it of tc.items){ if (!it.str || !it.str.trim()) continue; const y=it.transform[5], x=it.transform[4];
+      let r=rows.find(r=>Math.abs(r.y-y)<3); if (!r){ r={y, its:[]}; rows.push(r); } r.its.push({x, s:it.str, w:it.width||0}); }
+    rows.sort((a,b)=>b.y-a.y);
+    for (const r of rows){ r.its.sort((a,b)=>a.x-b.x); let s='', end=null;
+      for (const it of r.its){ if (end!=null){ const gap=it.x-end; if (gap>8) s=s.trimEnd()+'  '; else if (gap>1.5 && !/\s$/.test(s)) s+=' '; } s+=it.s; end=it.x+it.w; }
+      s=s.replace(/ /g,' ').replace(/ {3,}/g,'  ').trim(); if (s) out.push(s); }
+  }
+  return out;
+}
+const AF_MES={ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago:8,sep:9,set:9,oct:10,nov:11,dic:12};
+function afFechas(s){
+  const out=[], re=/\b(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{2,4})\b|\b(\d{4})-(\d{1,2})-(\d{1,2})\b|\b(\d{1,2})\s*(?:de\s+)?(ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-záéíóú]*\.?\s*(?:de\s+|del\s+)?(\d{4})\b/gi;
+  for (const m of String(s||'').matchAll(re)){
+    let d,mo,y; if (m[1]){ d=+m[1]; mo=+m[2]; y=+m[3]; if (y<100) y+=2000; } else if (m[4]){ y=+m[4]; mo=+m[5]; d=+m[6]; } else { d=+m[7]; mo=AF_MES[m[8].toLowerCase()]; y=+m[9]; }
+    if (!mo||mo>12||d<1||d>31||y<1990||y>2100) continue; out.push(`${y}-${pad2(mo)}-${pad2(d)}`);
+  }
+  return out;
+}
+// valor a la derecha de una etiqueta (o en el renglón de abajo)
+function afLab(L, re, ok){
+  // corta el valor donde empieza la etiqueta siguiente ("TOYOTA  Modelo: HILUX" → "TOYOTA")
+  const cut = v => { v=String(v||''); const k=v.search(/\s?:\s/); if (k<0) return v.trim();
+    return v.slice(0,k).replace(/\s*\S+$/,'').replace(/(\s+(?:de|del|la|el|n[º°o]\.?|nro\.?|fecha|tipo|año))+\s*$/i,'').trim(); };
+  for (let i=0;i<L.length;i++){
+    const cells=L[i].split(/\s{2,}/), j=cells.findIndex(c=>re.test(c)); if (j<0) continue;
+    const m=cells[j].match(re), rest=cells[j].slice(m.index+m[0].length).replace(/^\s*[:.\-–=]+\s*/,'').trim();
+    const nx=(L[i+1]||'').split(/\s{2,}/);
+    const cands=[rest, cells[j+1]&&/[:.]\s*$/.test(cells[j])?cells[j+1]:'', nx.length===cells.length?nx[j]:'', nx[0]].map(cut);
+    for (const c of cands) if (c && (!ok || ok(c))) return c; }
+  return '';
+}
+// fecha que sigue a una etiqueta; mx: si en el renglón hay varias, tomar la más tardía
+function afFecha(L, re, mx){
+  for (let i=0;i<L.length;i++){ const m=L[i].match(re); if (!m) continue;
+    let f=afFechas(L[i].slice(m.index+m[0].length)); if (!f.length) f=afFechas(L[i+1]||''); if (f.length) return mx ? f.sort().pop() : f[0]; }
+  return '';
+}
+const afTok = s => (String(s).match(/^[A-Za-z0-9][\w\-\/.#]*/)||[''])[0].replace(/[.\-]$/,'');
+const afNoLab = s => !/^(fecha|n[º°o]|nro|c[oó]digo|revisi|modelo|marca|serie|vencim)/i.test(s);
+const afNom = s => { s=String(s).replace(/\s{2,}.*/,'').trim(); return /^[A-Za-zÁÉÍÓÚÑáéíóúñü.' ]{4,60}$/.test(s) && afNoLab(s) ? s : ''; };
+const afBase = n => String(n||'').replace(/\.[a-z0-9]+$/i,'').replace(/[_]+/g,' ').trim();
+
+const CODE_RE=/\b(?:(?:F|IT|R|FO)\s?-?\s?\d{1,3}\s+)?(?:PG|PO|PE|MG|MSGI|MSG|MC|POL|PL|IT|F)\s?-\s?\d{1,3}\b|\b(?:F|IT)\s?\d{1,3}\s+(?:PG|PO)\s?-?\s?\d{1,3}\b/i;
+function afCode(s){ const m=String(s||'').match(CODE_RE); return m ? m[0].toUpperCase().replace(/\s*-\s*/g,'-').replace(/\s+/g,' ') : ''; }
+function afTipoDoc(c){ c=String(c||'').toUpperCase();
+  if (/^(F|FO|R)\s?-?\d/.test(c)) return 'Formulario'; if (/^IT\b|^IT\s?-?\d/.test(c)) return 'Instructivo';
+  if (/^PG/.test(c)) return 'Procedimiento general'; if (/^PO|^PE/.test(c)) return 'Procedimiento operativo';
+  if (/^POL|^PL/.test(c)) return 'Política'; if (/^M/.test(c)) return 'Manual'; return ''; }
+
+const AUTO = {
+  documentos(L, name){
+    const all=L.join('\n'), o={};
+    o.codigo = afCode(afLab(L,/\bc[oó]digo\b/i)) || afCode(name) || afCode(L.slice(0,25).join('\n'));
+    // revisión: "Rev. 03", "Revisión N° 2", "Rev: B" (sin confundir con "Fecha de revisión 10/11/2026")
+    for (const l of [...L.slice(0,40), afBase(name)]){ let hit='';
+      for (const m of l.matchAll(/\brev(?:isi[oó]n)?\.?\s*(?:n[º°o]\.?\s*|nro\.?\s*)?[:#]?\s*(\d{1,2}|[A-Z])(?![\w\/\-.])/gi)){
+        if (/(fecha|pr[oó]xima|de)\s*$/i.test(l.slice(0,m.index))) continue; hit=m[1]; break; }
+      if (hit){ o.rev=/^\d$/.test(hit)?'0'+hit:hit.toUpperCase(); break; } }
+    let tit = afLab(L,/\bt[ií]tulo\b/i, afNoLab);
+    if (!tit && o.codigo){ for (const l of L.slice(0,25)){ const i=l.toUpperCase().indexOf(o.codigo.split(' ').pop()); if (i<0) continue;
+        const rest=l.split(/\s{2,}/).map(x=>x.trim()).filter(x=>x && !afCode(x) && !/^rev|^p[aá]g|^hoja|^fecha|condor|wireline/i.test(x) && /[a-záéíóú]{3}/i.test(x));
+        if (rest.length){ tit=rest.sort((a,b)=>b.length-a.length)[0]; break; } } }
+    if (!tit){ const c=L.slice(0,20).flatMap(l=>l.split(/\s{2,}/)).map(x=>x.trim()).filter(x=>x.length>=10 && x.length<=110 && /[A-Za-zÁÉÍÓÚ]{4}/.test(x) && !afCode(x) && !afFechas(x).length && !/condor|wireline|p[aá]gina|^rev|^fecha|^c[oó]digo|^elabor|^aprob|^revis/i.test(x));
+      tit = c.find(x=>x===x.toUpperCase()) || c[0] || ''; }
+    if (!tit) tit=afBase(name).replace(CODE_RE,'').replace(/\brev(isi[oó]n)?\.?\s*\w+/i,'').replace(/^[\s\-–_.]+|[\s\-–_.]+$/g,'');
+    if (tit){ tit=tit.replace(/^[\s\-–:.]+|[\s\-–:.]+$/g,''); o.titulo = tit===tit.toUpperCase() ? tit.charAt(0)+tit.slice(1).toLowerCase() : tit; }
+    o.tipo = afTipoDoc(o.codigo) || (/\bmanual\b/i.test(all.slice(0,600))?'Manual':/\bpol[ií]tica\b/i.test(all.slice(0,600))?'Política':/\binstructivo\b/i.test(all.slice(0,600))?'Instructivo':/\bprocedimiento\b/i.test(all.slice(0,600))?'Procedimiento general':'');
+    o.fecha = afFecha(L,/fecha\s+de\s+(?:la\s+)?(?:revisi[oó]n|emisi[oó]n|aprobaci[oó]n|vigencia)|\bvigencia\b|\bemisi[oó]n\b/i) || afFecha(L,/\bfecha\b/i);
+    o.prox  = afFecha(L,/pr[oó]xima\s+revisi[oó]n|revisar\s+antes\s+de/i);
+    o.resp  = afNom(afLab(L,/\b(?:aprob[oó]|aprobado\s+por|responsable(?:\s+del\s+documento)?)(?![a-záéíóú])/i, afNom));
+    const cam = afLab(L,/(?:descripci[oó]n|motivo|resumen)\s+de(?:l| los)?\s+cambios?|cambios\s+(?:de\s+la\s+|respecto\s+a\s+la\s+)?revisi[oó]n/i);
+    if (cam && cam.length>4) o.obs=cam;
+    o.url = 'Adjunto en el SGI · '+name;
+    return o;
+  },
+  flota(L, name){
+    const all=L.join('\n'), o={};
+    const kind = /p[oó]liza|asegurad|aseguradora|cobertura|\bseguro\b/i.test(all) ? 'Seguro'
+      : /\bVTV\b|\bRTO\b|revisi[oó]n\s+t[eé]cnica|verificaci[oó]n\s+t[eé]cnica/i.test(all) ? 'VTV / RTO'
+      : /c[eé]dula|t[ií]tulo\s+del\s+automotor|t[ií]tulo\s+de\s+propiedad/i.test(all) ? 'Cédula / título' : '';
+    const DOM=/\b([A-Z]{2}\s?\d{3}\s?[A-Z]{2})\b|\b([A-Z]{3}\s?\d{3})\b/;
+    const dl=afLab(L,/\b(?:dominio|patente)\b/i, x=>DOM.test(x.toUpperCase()));
+    const dm=(dl.toUpperCase().match(DOM)) || all.match(/\b([A-Z]{2}\s?\d{3}\s?[A-Z]{2})\b/);
+    if (dm) o.dominio=(dm[1]||dm[2]).replace(/\s+/g,'');
+    const marca=afLab(L,/\bmarca\b/i, afNoLab), modelo=afLab(L,/\bmodelo\b/i, afNoLab);
+    o.modelo=[marca, modelo].filter(Boolean).join(' ').slice(0,80);
+    if (kind==='Seguro') o.vSeguro = afFecha(L,/\bhasta\b|fin\s+de\s+vigencia|vencimiento/i) || afFecha(L,/vigencia/i, true);
+    if (kind==='VTV / RTO') o.vVTV = afFecha(L,/vencimiento|v[aá]lid[oa]\s+hasta|\bvence\b|pr[oó]xima\s+(?:revisi[oó]n|verificaci[oó]n|inspecci[oó]n)|\bhasta\b/i);
+    const km=afLab(L,/\b(?:kilometraje|od[oó]metro|km\s+recorridos)\b/i, x=>/\d/.test(x)); if (km){ const n=km.replace(/[^\d]/g,''); if (n) o.km=n; }
+    if (/tractor|cami[oó]n|semirremolque|acoplado|chasis\s+con\s+cabina/i.test(all)) o.categoria='Pesados';
+    else if (/pick.?up|camioneta|autom[oó]vil|sed[aá]n|utilitario/i.test(all)) o.categoria='Livianos';
+    o._tipo = kind;
+    return o;
+  },
+};
+// equipos y herramientas: certificados de inspección, prueba hidráulica o calibración
+AUTO.equipos = AUTO.herramientas = function(L, name){
+  const all=L.join('\n'), o={};
+  o.serie = afTok(afLab(L,/n[º°o]\.?\s*(?:de\s+)?serie|serie\s*n[º°o]|\bnro\.?\s*(?:de\s+)?serie|\bserial(?:\s+n[º°o]\.?)?|\bs\s*\/\s*n\b|\bserie\b/i, x=>/\d/.test(x)));
+  o.informe = afTok(afLab(L,/(?:certificado|informe|reporte|protocolo|cert\.)\s*(?:de\s+\S+\s+)?(?:n[º°o]\.?|nro\.?|n[uú]mero|#)/i, x=>/\d/.test(x)));
+  let cer = afLab(L,/empresa\s+certificadora|organismo(?:\s+certificador)?|certificadora|emitido\s+por|inspeccionado\s+por|calibrado\s+por|laboratorio/i, afNoLab);
+  if (!cer){ const k=all.match(/\b(Bureau Veritas|T[ÜU]V(?:\s+(?:Rheinland|S[ÜU]D|Nord))?|SGS|DNV|Lloyd'?s Register|IRAM|INTI|Intertek|Applus\+?|ABS Group|Det Norske Veritas)\b/i); if (k) cer=k[1]; }
+  if (cer) o.certificador=cer.slice(0,80);
+  o.fCert = afFecha(L,/fecha\s+de\s+(?:la\s+)?(?:certificaci[oó]n|inspecci[oó]n|ensayo|emisi[oó]n|calibraci[oó]n|prueba)|fecha\s+(?:de\s+)?(?:inspecci|ensayo)|\bemitido\s+el\b/i) || afFecha(L,/\bfecha\b/i);
+  o.vCert = afFecha(L,/(?:fecha\s+de\s+)?vencimiento|v[aá]lid[oa]\s+hasta|\bvence\b|vigencia\s+hasta|pr[oó]xima\s+(?:inspecci[oó]n|calibraci[oó]n|certificaci[oó]n|prueba)|\bvalidez\s+hasta/i);
+  if (!o.vCert && o.fCert){ const v=all.match(/validez\s*(?:de\s*)?:?\s*(\d{1,2})\s*(mes|meses|a[ñn]o|a[ñn]os)\b/i);
+    if (v){ const d=new Date(o.fCert+'T00:00:00'); d.setMonth(d.getMonth()+(+v[1])*(/a[ñn]/i.test(v[2])?12:1)); o.vCert=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); } }
+  o.marca = afLab(L,/\b(?:marca|fabricante)\b/i, afNoLab).slice(0,60);
+  o.modelo = afLab(L,/\bmodelo\b/i, afNoLab).slice(0,60);
+  const wp = all.match(/\b(\d{1,2}[.,]?\d{3}|\d{2,3})\s?(psi|k\s?psi)\b/i) || all.match(/\b(\d{1,2})\s?(K)\s?(?:psi|WP)\b/i);
+  if (wp) o.wp = wp[1].replace(/[.,]/g,'')+' '+(/k/i.test(wp[2])?'K psi':'psi');
+  const od = all.match(/\b(\d{1,2}(?:\s\d{1,2}\/\d{1,2})?|\d\/\d{1,2})\s?(?:"|”|pulg|in\b)/i); if (od && AUTO_K==='herramientas') o.od=od[1]+'"';
+  o.desc = afLab(L,/\b(?:descripci[oó]n(?:\s+del\s+(?:equipo|elemento))?|equipo|elemento|herramienta|objeto\s+(?:inspeccionado|ensayado))\b\s*[:.]/i, afNoLab).slice(0,100);
+  o.codigo = afTok(afLab(L,/c[oó]digo(?:\s+interno)?|n[º°o]\s*interno|identificaci[oó]n|\bTAG\b/i, x=>/\d/.test(x)));
+  const tl = all.toLowerCase();
+  o._tipo = /calibraci/.test(tl) ? 'Certificado / calibración' : /prueba\s+hidr[aá]ulica|ensayo\s+hidrost/.test(tl) ? 'Prueba hidráulica' : /informe\s+de\s+inspecci/.test(tl) ? 'Informe de inspección' : /certificad/.test(tl) ? (AUTO_K==='equipos'?'Certificado':'Certificado / calibración') : '';
+  return o;
+};
+let AUTO_K='';
+const AF_KEYS = (rk) => REG[rk].f.filter(f=>!f.auto).map(f=>f.k);
+async function autofillPdf(file){
+  const rk=S.recK, R=REG[rk]; AUTO_K=rk;
+  S.autoInfo={file:file.name, busy:true}; autoRefresh();
+  let L=[];
+  try { L=await pdfLines(file); }
+  catch(e){ console.warn('[SGI] pdf', e); S.autoInfo={file:file.name, err: navigator.onLine?'No se pudo leer el PDF (puede estar protegido o dañado).':'Sin conexión: el lector de PDF se descarga la primera vez que se usa. Probá con señal.'}; autoRefresh(); return ''; }
+  if (S.recK!==rk) return '';
+  if (L.join('').replace(/\s/g,'').length<20){ S.autoInfo={file:file.name, err:'El PDF parece escaneado (es solo imagen, no tiene texto): quedó adjunto, pero los datos hay que cargarlos a mano.'}; autoRefresh(); return ''; }
+  let v={}; try { v=AUTO[rk](L, file.name)||{}; } catch(e){ console.warn('[SGI] autofill', e); }
+  const tipo=v._tipo||''; delete v._tipo;
+  const filled=[], diff=[];
+  for (const k of AF_KEYS(rk)){
+    let x=v[k]; if (x==null || !String(x).trim()) continue; x=String(x).trim();
+    const f=R.f.find(f=>f.k===k);
+    if (f.t==='sel' && !f.o.includes(x)) continue;
+    if (f.t==='dt' && !/^\d{4}-\d{2}-\d{2}$/.test(x)) continue;
+    const cur=String(S.rec[k]??'').trim();
+    if (!cur){ S.rec[k]=x; filled.push(k); }
+    else if (cur!==x) diff.push([k,x]);
+  }
+  if (filled.length) S.recDirty=true;
+  S.autoKeys=[...new Set([...(S.autoKeys||[]), ...filled])];
+  S.autoInfo={file:file.name, filled, diff};
+  renderRec();
+  return tipo;
+}
+function autoHTML(){
+  const a=S.autoInfo; if (!a) return '';
+  const R=REG[S.recK], lab=k=>(R.f.find(f=>f.k===k)||{}).l||k;
+  if (a.busy) return `<div class="autofill">⏳ Leyendo <b>${esc(a.file)}</b> para completar los datos…</div>`;
+  if (a.err) return `<div class="autofill warn">${esc(a.err)}</div>`;
+  const dv = a.diff&&a.diff.length ? `<div class="af-diff">El PDF trae otro valor en ${a.diff.length===1?'un campo que ya estaba cargado':a.diff.length+' campos que ya estaban cargados'}: ${a.diff.map(([k,x])=>`<b>${esc(lab(k))}</b> → ${esc(R.f.find(f=>f.k===k)?.t==='dt'?fdate(x):x)}`).join(' · ')} <button type="button" class="adj-btn" id="af-use">Usar los del PDF</button></div>` : '';
+  if (!a.filled.length && !dv) return `<div class="autofill warn">No se reconocieron datos en <b>${esc(a.file)}</b>. El archivo quedó adjunto; completá los campos a mano.</div>`;
+  return `<div class="autofill">${a.filled.length?`✓ Se completaron ${a.filled.length} dato${a.filled.length>1?'s':''} desde <b>${esc(a.file)}</b>: ${a.filled.map(k=>esc(lab(k))).join(', ')}. Revisalos (quedan marcados) y tocá <b>Guardar</b>.`:`Los datos de <b>${esc(a.file)}</b> ya estaban cargados.`}${dv}</div>`;
+}
+function autoRefresh(){ const b=$('#auto-box'); if (b) b.innerHTML=autoHTML(); }
+$('#v-rec').addEventListener('click', e=>{
+  if (!e.target.closest('#af-use') || !S.autoInfo?.diff) return;
+  for (const [k,x] of S.autoInfo.diff){ S.rec[k]=x; S.autoKeys=[...(S.autoKeys||[]), k]; S.autoInfo.filled.push(k); }
+  S.autoInfo.diff=[]; S.recDirty=true; renderRec(); toast('Datos reemplazados con los del PDF · tocá Guardar');
+});
+$('#v-rec').addEventListener('input', e=>{ const k=e.target.dataset.rk; if (k && S.autoKeys) { e.target.classList.remove('af'); S.autoKeys=S.autoKeys.filter(x=>x!==k); } });
 const ADJ_MAX = 6*1024*1024, ADJ_PARTE = 700000;
 const IDB_ADJ = (()=>{ let p;
   const open=()=> p = p || new Promise((res,rej)=>{ try { const r=indexedDB.open('sgi-cwl-adj',1); r.onupgradeneeded=()=>r.result.createObjectStore('a',{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); } catch(e){ rej(e); } });
@@ -2031,10 +2241,10 @@ function adjHTML(){
       <div><button type="button" data-adj-ver="${i}">Ver</button>${ro?'':`<button type="button" class="x" data-adj-del="${i}" title="Quitar">✕</button>`}</div></div>`).join('')}</div>`
     : '<p class="hint" style="margin:0">Todavía no hay documentos adjuntos.</p>';
   if (ro) return items;
-  return `<div class="adj-drop" id="adj-drop">Arrastrá acá una foto o un PDF (o un enlace de SharePoint)
+  return `<div class="adj-drop" id="adj-drop"><b>Arrastrá acá uno o varios archivos</b> (PDF o fotos) o un enlace de SharePoint${AUTO[S.recK]?'<br><small>Al soltar un PDF, los datos de arriba se completan solos con lo que se lea del documento.</small>':''}
       <div class="adj-row"><select id="adj-tipo" aria-label="Tipo de documento">${tipos.map(t=>`<option ${t===S.adjTipo?'selected':''}>${esc(t)}</option>`).join('')}</select>
       <label class="adj-btn">📷 Sacar foto<input type="file" accept="image/*" capture="environment" data-adj-file></label>
-      <label class="adj-btn">📎 Elegir archivo<input type="file" accept="image/*,application/pdf" data-adj-file></label></div>
+      <label class="adj-btn">📎 Elegir archivos<input type="file" accept="image/*,application/pdf" multiple data-adj-file></label></div>
       <div class="adj-link"><input id="adj-url" type="url" placeholder="o pegá el enlace de SharePoint / OneDrive"><button type="button" class="adj-btn" id="adj-url-add">Agregar enlace</button></div>
     </div>${items}<p class="hint" style="margin:8px 0 0">Las fotos se achican antes de guardarse. PDF hasta 6 MB. Tocá <b>Guardar</b> para confirmar los cambios.</p>`;
 }
@@ -2052,8 +2262,10 @@ async function adjFile(file){
     let data, th='';
     if (isImg){ const im=await loadImg(file); data=shrink(im, 1600, 0.7); th=shrink(im, 160, 0.6); }
     else data=await readURL(file);
+    let tipoA=tipo;
+    if (isPdf && AUTO[S.recK]){ const t=await autofillPdf(file); if (t && (ADJ_TIPOS[S.recK]||[]).includes(t)) tipoA=t; }
     const id='a'+uid(), at=new Date().toISOString(), size=Math.round(data.length*0.75);
-    const meta={id, tipo, nombre:file.name||(tipo+'.jpg'), mime:isImg?'image/jpeg':(file.type||'application/pdf'), size, at, by:S.uid||null, byName:S.myName||'', th};
+    const meta={id, tipo:tipoA, nombre:file.name||(tipo+'.jpg'), mime:isImg?'image/jpeg':(file.type||'application/pdf'), size, at, by:S.uid||null, byName:S.myName||'', th};
     try { await IDB_ADJ.put({...meta, data, col:REG[S.recK].c, rec:S.recId, up:0}); } catch(e){ ADJ_MEM[id]=data; }
     adjPush(meta); subirAdj();
   } catch(e){ console.warn(e); toast('No se pudo leer el archivo'); }
@@ -2098,7 +2310,7 @@ async function adjVer(a){
   $('#adjm-b').innerHTML = /^data:image/.test(d) ? `<img src="${url}" alt="${esc(a.tipo||'')}">` : '<p class="hint">Documento PDF listo. Tocá <b>Abrir</b> para verlo.</p>';
   const o=$('#adjm-o'), dl=$('#adjm-d'); o.href=url; o.hidden=false; dl.href=url; dl.download=a.nombre||'documento'; dl.hidden=false;
 }
-$('#v-rec').addEventListener('change', e=>{ const el=e.target; if (el.id==='adj-tipo') S.adjTipo=el.value; if (el.matches && el.matches('[data-adj-file]')){ const f=el.files&&el.files[0]; el.value=''; adjFile(f); } });
+$('#v-rec').addEventListener('change', e=>{ const el=e.target; if (el.id==='adj-tipo') S.adjTipo=el.value; if (el.matches && el.matches('[data-adj-file]')){ const fs=[...(el.files||[])]; el.value=''; (async()=>{ for (const f of fs) await adjFile(f); })(); } });
 $('#v-rec').addEventListener('click', e=>{
   const v=e.target.closest('[data-adj-ver]'); if (v){ const a=(S.rec.adj||[])[+v.dataset.adjVer]; if (a) adjVer(a); return; }
   const x=e.target.closest('[data-adj-del]'); if (x){ if (!x.dataset.armed){ x.dataset.armed=1; x.textContent='¿Quitar?'; setTimeout(()=>{ if (x.isConnected){ delete x.dataset.armed; x.textContent='✕'; } },3500); return; }
@@ -2107,9 +2319,12 @@ $('#v-rec').addEventListener('click', e=>{
     toast('Documento quitado · tocá Guardar'); return; }
   if (e.target.closest('#adj-url-add')) adjUrl($('#adj-url')?.value);
 });
-$('#v-rec').addEventListener('dragover', e=>{ const z=e.target.closest('#adj-drop'); if (!z) return; e.preventDefault(); z.classList.add('on'); });
-$('#v-rec').addEventListener('dragleave', e=>{ const z=e.target.closest('#adj-drop'); if (z && !z.contains(e.relatedTarget)) z.classList.remove('on'); });
-$('#v-rec').addEventListener('drop', e=>{ const z=e.target.closest('#adj-drop'); if (!z) return; e.preventDefault(); z.classList.remove('on');
+// se puede soltar el archivo en cualquier parte del formulario (no solo en el recuadro)
+const dropZ = () => S.view==='rec' && S.canWrite!==false ? $('#adj-drop') : null;
+let _dragT=0;
+document.addEventListener('dragover', e=>{ const z=dropZ(); if (!z) return; e.preventDefault(); z.classList.add('on'); clearTimeout(_dragT); _dragT=setTimeout(()=>z.classList.remove('on'), 400); });
+document.addEventListener('drop', e=>{ const z=dropZ(); if (!z) return; e.preventDefault(); z.classList.remove('on');
+  if (!z.closest('.sec')?.contains(e.target)) z.scrollIntoView({behavior:'smooth', block:'center'});
   const fs=[...(e.dataTransfer.files||[])];
   if (fs.length){ (async()=>{ for (const f of fs) await adjFile(f); })(); return; }
   const u=(e.dataTransfer.getData('text/uri-list')||e.dataTransfer.getData('text/plain')||'').split('\n').find(x=>/^https?:/i.test(x.trim()));
