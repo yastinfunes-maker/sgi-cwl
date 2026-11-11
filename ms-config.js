@@ -5,8 +5,8 @@
   Estos datos no son secretos: cada usuario entra con su propia cuenta de CWL y ve solo lo que SharePoint le permite.
 */
 window.SGI_MS_CONFIG = {
-  clientId: "COMPLETAR",                 // Id. de aplicación (cliente) de Entra ID
-  tenant: "cwl.com.ar",                  // dominio o Id. de directorio (inquilino) de CWL
+  clientId: "00cded60-0c49-4de1-8c33-be2cff01fa85",               // Id. de aplicación (cliente) de Entra ID
+  tenant: "81a055a9-49c5-4266-818f-8e9ccf067e51", // Id. de directorio (inquilino) de CWL
   // Carpeta de certificaciones: SharePoint Operaciones › Pozos › Certificaciones
   site: "cwlms.sharepoint.com:/sites/operaciones",
   library: "Pozos",
