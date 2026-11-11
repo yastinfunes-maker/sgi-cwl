@@ -24,10 +24,10 @@ service cloud.firestore {
 
     // Datos del SGI: job papers (con sus hojas), historial Ops & KPIs (F04), NC, auditorías, documentos,
     // incidentes, personal, vehículos, equipos, herramientas, capacitaciones, horas hombre,
-    // fotos y archivos adjuntos
+    // fotos, archivos adjuntos y clasificación de certificaciones de SharePoint (cert)
     match /{col}/{resto=**} {
       allow read, write: if habilitado()
-        && col in ['servicios', 'ops', 'nc', 'aud', 'doc', 'inc', 'per', 'veh', 'eqp', 'hta', 'cap', 'hh', 'fotos', 'adjuntos'];
+        && col in ['servicios', 'ops', 'nc', 'aud', 'doc', 'inc', 'per', 'veh', 'eqp', 'hta', 'cap', 'hh', 'fotos', 'adjuntos', 'cert'];
     }
   }
 }

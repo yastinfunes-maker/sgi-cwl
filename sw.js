@@ -1,6 +1,6 @@
 /* Guarda la app en el equipo para poder abrirla sin señal (en el pozo). Los datos los guarda Firestore. */
-const CACHE = 'sgi-cwl-v6';
-const SHELL = ['./', './index.html', './firebase-config.js', './sgi-firebase.js', './manifest.webmanifest', './logo.png', './icon-192.png', './icon-512.png',
+const CACHE = 'sgi-cwl-v7';
+const SHELL = ['./', './index.html', './firebase-config.js', './sgi-firebase.js', './ms-config.js', './certificaciones.js', './manifest.webmanifest', './logo.png', './icon-192.png', './icon-512.png',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js',
@@ -11,7 +11,7 @@ self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Pro
 self.addEventListener('fetch', e => {
   const r = e.request; if (r.method !== 'GET') return;
   const u = new URL(r.url);
-  if (/firestore\.googleapis|identitytoolkit|securetoken|googleapis\.com\/(identity|token)/.test(u.href)) return; // datos y login: siempre en vivo
+  if (/firestore\.googleapis|identitytoolkit|securetoken|googleapis\.com\/(identity|token)|graph\.microsoft\.com|login\.microsoftonline|sharepoint\.com/.test(u.href) || /ms-redirect\.html/.test(u.pathname)) return; // datos y login: siempre en vivo
   e.respondWith(fetch(r).then(res => { if (res && (res.ok || res.type === 'opaque')) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)); } return res; })
     .catch(() => caches.match(r, { ignoreSearch: true }).then(m => m || caches.match('./index.html'))));
 });

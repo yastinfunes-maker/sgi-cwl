@@ -13,6 +13,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="sgi-firebase.js"></script>
+<script src="ms-config.js"></script>
+<script src="certificaciones.js"></script>
 </head>
 <body>
 <title>SGI Condor Wireline</title>
@@ -389,6 +391,21 @@ header.top .wrap{gap:12px}
 #adjm img{max-width:100%;max-height:70dvh;object-fit:contain;align-self:center}
 #avm textarea{width:100%;box-sizing:border-box;min-height:110px;font:14px system-ui;padding:8px;border-radius:6px;border:1px solid var(--line,#c9d3d1);background:var(--surface);color:var(--ink)}
 #avm input{font:14px system-ui;padding:8px;border-radius:6px;border:1px solid var(--line,#c9d3d1);background:var(--surface);color:var(--ink);width:90px}
+/* ----- certificaciones (SharePoint) ----- */
+.ct-kpis .kpi{background:none;border-top:0;border-right:0;border-bottom:0;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.ct-kpis .kpi:first-child{border-left:0} .ct-kpis .kpi.on{background:var(--surface-2);box-shadow:inset 0 -3px 0 var(--accent)}
+.ct-bar{grid-template-columns:2fr 1fr 1fr auto}
+.ct-dot{display:inline-block;width:8px;height:8px;border-radius:50%;vertical-align:middle;margin-left:2px} .ct-dot.bad{background:var(--bad)} .ct-dot.warn{background:var(--amber)}
+.ct-selbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:8px 12px;border:1px solid var(--accent);border-radius:var(--r);background:var(--surface)}
+.ct-t td{vertical-align:top} .ct-doc a{color:var(--ink);font-weight:600;word-break:break-word} .ct-doc{min-width:220px}
+.ct-acts{white-space:nowrap} .ct-acts .adj-btn{padding:5px 9px;font-size:12.5px;margin:0 0 4px 4px}
+.ct-acts .ct-hot{background:var(--accent);color:var(--accent-ink)}
+tr.ct-hist{opacity:.6}
+.ct-g{grid-template-columns:repeat(4,minmax(0,1fr))} .ct-g .c2{grid-column:span 2} .ct-g .c4{grid-column:1/-1}
+.ct-file{align-self:flex-start}
+.ct-cur div{min-width:0;word-break:break-word}
+.ct-setup ol{padding-left:20px;line-height:1.6} .ct-setup code{font:12.5px var(--mono);background:var(--surface-2);padding:1px 5px;border-radius:4px;word-break:break-all}
+@media (max-width:700px){.ct-bar{grid-template-columns:1fr 1fr}.ct-bar .q{grid-column:1/-1}.ct-g{grid-template-columns:1fr 1fr}.ct-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 
 <div class="app">
@@ -401,6 +418,7 @@ header.top .wrap{gap:12px}
   <a class="nv" href="#tablero-ops" data-r="tablero-ops"><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16V9M11 16V5M15 16v-4M19 16V8"/></svg><div><b>Ops &amp; KPIs</b><small>Trabajos, facturación, bonos</small></div></a>
   <a class="nv" href="#flota" data-r="flota"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><div><b>Flota</b><small>Unidades y vencimientos</small></div></a>
   <a class="nv" href="#equipos" data-r="equipos"><svg viewBox="0 0 24 24"><path d="M14 7l3-3 3 3-3 3zM4 20l9-9M8 6l10 10"/></svg><div><b>Equipos</b><small>Certificaciones y vencimientos</small></div></a>
+  <a class="nv" href="#certificaciones" data-r="certificaciones"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v6M14 3v4h4M6 3v18h7"/><circle cx="17.5" cy="17" r="3.2"/><path d="M15.8 19.8 15 23l2.5-1.2L20 23l-.8-3.2"/></svg><div><b>Certificaciones</b><small>SharePoint · estados y reemplazos</small></div></a>
   <a class="nv" href="#herramientas" data-r="herramientas"><svg viewBox="0 0 24 24"><path d="M14.5 5.5a4 4 0 0 0-5 5L4 16l4 4 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2.5-.5-.5-2.5z"/></svg><div><b>Herramientas</b><small>Codificadas y calibraciones</small></div></a>
   <div class="sb-grp">Calidad / SGI</div>
   <a class="nv" href="#nc" data-r="nc"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg><div><b>No conformidades</b><small>Hallazgos y acciones</small></div></a>
@@ -431,6 +449,7 @@ header.top .wrap{gap:12px}
   <section id="v-tab" hidden></section>
   <section id="v-col" hidden></section>
   <section id="v-rec" hidden></section>
+  <section id="v-cert" hidden></section>
 
   <div id="filters" class="filters">
     <input class="q" id="f-q" type="search" placeholder="Buscar Nº, pozo, OT, yacimiento…" aria-label="Buscar">
@@ -604,7 +623,7 @@ async function connect(){
       const n={}; for (const d of snap.docs) n[d.id]=d.data();
       S.rsvc=n; persist(); rebuild(); syncUI(); if (S.live) flush(); refresh(true);
     }, err=>{ clearTimeout(timer); S.live=false; syncUI(); if (err&&err.code==='revoked') banner('Se retiró el acceso a la base compartida.', 'warn'); });
-    for (const c of ['nc','aud','doc','inc','per','veh','eqp','hta','cap','hh']) db.collection(c).onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.rcol[c]=n; persist(); rebuild(); if (c==='per'||c==='veh') fillDyn(); refresh(true); }, ()=>{});
+    for (const c of ['nc','aud','doc','inc','per','veh','eqp','hta','cap','hh','cert']) db.collection(c).onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.rcol[c]=n; persist(); rebuild(); if (c==='per'||c==='veh') fillDyn(); refresh(true); }, ()=>{});
     db.collection('ops').onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.ops=n; if (S.route==='tablero-ops'||S.view==='ctrl') refresh(true); }, ()=>{});
     if (S.sid) watchHojas(S.sid);
   } catch(e){ clearTimeout(timer); syncUI(); console.error('[SGI] conexión', e); banner('No se pudo conectar con la base compartida'+(e&&(e.message||e.code)?': <span class="mono small">'+esc(e.message||e.code)+'</span>':'')+'. Lo que cargues queda en este equipo. Recargá la página (F5); si sigue, mandá una captura de este aviso.', 'warn'); }
@@ -1000,9 +1019,10 @@ const ROUTES = {
   'tablero-calidad':{t:'Tablero de calidad', s:'Control de gestión · SGI', v:'tab', nav:'control'},
   'tablero-personas':{t:'Tablero de personas', s:'Control de gestión · RRHH', v:'tab', nav:'control'},
   'tablero-flota':{t:'Tablero de flota', s:'Control de gestión · flota', v:'tab', nav:'control'},
+  certificaciones:{t:'Certificaciones', s:'SharePoint · Operaciones › Pozos › Certificaciones', v:'cert', nav:'certificaciones'},
 };
 function ensureRoutes(){ if (!ROUTES.nc) for (const [k,R] of Object.entries(REG)) ROUTES[k]={t:R.t, s:R.sub, v:'col', act:R.nueva, nav:k}; }
-const VIEWS=['home','reg','ind','svc','ctrl','tab','col','rec'];
+const VIEWS=['home','reg','ind','svc','ctrl','tab','col','rec','cert'];
 function setTitle(t,sub){ $('#pt-t').textContent=t; $('#pt-s').textContent=sub||''; }
 function show(v){
   ensureRoutes();
@@ -1040,6 +1060,7 @@ function refresh(fromRemote){
   else if (S.view==='ctrl') renderCtrl();
   else if (S.view==='tab') renderTab(S.route);
   else if (S.view==='col') renderCol(S.route);
+  else if (S.view==='cert'){ if (window.renderCert) renderCert(); }
   else if (S.view==='rec'){ if (!fromRemote) renderRec(); }
   else if (S.view==='svc'){ if (fromRemote) onRemoteHoja(); else { renderSvcHead(); updateCalcs(); } }
 }
@@ -1656,6 +1677,8 @@ function renderHome(){
     ['#incidentes', 'Incidentes · 30 días', fmt(inc30.length), `${hs.cb} accidentes con baja en 12 meses`, inc30.length?'warn':'ok'],
     ['#auditorias', 'Auditorías próximas', fmt(audNext.length), 'planificadas en los próximos 30 días', ''],
   ];
+  const cr = window.certResumen && certResumen();
+  al.splice(2, 0, ['#certificaciones', 'Certificaciones vencidas', cr?fmt(cr.venc):'—', cr?`${cr.prox} vencen en 30 días · ${cr.total} en SharePoint`:'conectá SharePoint para ver el estado', cr?(cr.venc?'bad':cr.prox?'warn':'ok'):'']);
   const mods=[['jobpapers','Job Papers','Operación','Carga online / offline de cada servicio de wireline con las 21 hojas del F01 PG-15.'],['control','Control de gestión','Operación','Tableros de operación, NPT, HSE, calidad, personas y flota.'],['nc','No conformidades','Calidad / SGI','Hallazgos, análisis de causa y seguimiento de acciones.'],['personal','Legajos','Personas','Habilitaciones del personal con semáforo de vencimientos.']];
   $('#v-home').innerHTML = `<div class="hero">${heroSVG()}<div class="eyebrow">Sistema de gestión integrado</div><h1>Condor Wireline, <em>en un solo lugar.</em></h1><p>Operación, calidad, HSE y personas conectados: lo que se carga en cada job paper alimenta los tableros y los registros del sistema.</p></div>
    <div class="sect-h"><h3>Alertas</h3><span>al ${esc(fdate(today()))}</span></div>
