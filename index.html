@@ -1874,6 +1874,9 @@ async function importInicial(data){
 }
 
 /* ================= boot ================= */
+// campos de vencimiento que se marcan en los desplegables de personal y unidades (tienen que existir antes del primer fillDyn)
+var VENC_PER=[['vCarnet','Carnet'],['vExamen','Examen médico'],['vMD','Manejo defensivo']];
+var VENC_VEH=[['vSeguro','Seguro'],['vVTV','VTV / RTO']];
 function fillDyn(){
   const per=colRows('per').filter(d=>d.estado!=='Baja'); const veh=colRows('veh').filter(d=>d.estado!=='Baja');
   const dp=$('#dl-pers'), dv=$('#dl-veh');
@@ -1892,7 +1895,7 @@ function fillLists(){
 }
 fillLists();
 rebuild();
-fillDyn();
+try { fillDyn(); } catch(e){ console.warn('[SGI] fillDyn', e); } // un dato raro en los maestros no puede frenar el arranque ni la conexión
 /* ================= firmas con el dedo + fotos del chequeo ================= */
 // --- estado de firmas de una hoja ---
 function sigState(d, secs){
@@ -2197,8 +2200,6 @@ if (draft && draft.cur && draft.sid){
 go((location.hash||'#inicio').slice(1));
 connect();
 /* ===== aviso de vencimientos al elegir persona o unidad (se puede elegir igual) ===== */
-var VENC_PER=[['vCarnet','Carnet'],['vExamen','Examen médico'],['vMD','Manejo defensivo']];
-var VENC_VEH=[['vSeguro','Seguro'],['vVTV','VTV / RTO']];
 function vencLista(d, campos){ const out=[]; for (const [k,l] of campos){ const dd=dayDiff(d[k]); if (dd!=null && dd<=30) out.push({l, d:dd}); } return out; }
 function vencTxt(d, campos){ const v=vencLista(d,campos).filter(x=>x.d<0); return v.length ? ' · ⚠ VENCIDO: '+v.map(x=>x.l).join(', ') : ''; }
 function vencDe(list, val){
