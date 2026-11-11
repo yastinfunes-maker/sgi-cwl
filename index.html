@@ -607,7 +607,7 @@ async function connect(){
     for (const c of ['nc','aud','doc','inc','per','veh','eqp','hta','cap','hh']) db.collection(c).onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.rcol[c]=n; persist(); rebuild(); if (c==='per'||c==='veh') fillDyn(); refresh(true); }, ()=>{});
     db.collection('ops').onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.ops=n; if (S.route==='tablero-ops'||S.view==='ctrl') refresh(true); }, ()=>{});
     if (S.sid) watchHojas(S.sid);
-  } catch(e){ clearTimeout(timer); syncUI(); }
+  } catch(e){ clearTimeout(timer); syncUI(); console.error('[SGI] conexión', e); banner('No se pudo conectar con la base compartida'+(e&&(e.message||e.code)?': <span class="mono small">'+esc(e.message||e.code)+'</span>':'')+'. Lo que cargues queda en este equipo. Recargá la página (F5); si sigue, mandá una captura de este aviso.', 'warn'); }
 }
 function watchHojas(sid){
   if (S.unsubH){ S.unsubH(); S.unsubH=null; }

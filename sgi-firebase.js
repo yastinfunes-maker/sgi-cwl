@@ -100,6 +100,8 @@
       }
       firebase.initializeApp(cfg);
       const auth = firebase.auth(), fs = firebase.firestore();
+      // redes de empresa / antivirus / Edge a veces cortan la conexión directa de Firestore: probar long polling automáticamente
+      try { fs.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) { console.warn('[SGI] settings:', e.message); }
       try { await fs.enablePersistence({ synchronizeTabs: true }); } catch (e) { console.warn('[SGI] Sin caché offline:', e.code); }
       const u = await new Promise(res => auth.onAuthStateChanged(x => { if (x) res(x); else loginUI(auth); }));
       // ¿está habilitado? (lista "acceso" en Firestore, un documento por email)
@@ -107,7 +109,11 @@
       try {
         const a = await fs.doc('acceso/' + email).get();
         if (!a.exists && !a.metadata.fromCache) { blocked(auth, email); return new Promise(() => {}); }
-      } catch (e) { if (e.code === 'permission-denied') { blocked(auth, email); return new Promise(() => {}); } }
+      } catch (e) {
+        if (e.code === 'permission-denied') { blocked(auth, email); return new Promise(() => {}); }
+        // sin señal o conexión lenta: no se pudo verificar la lista de acceso ahora; se sigue y las reglas de Firestore deciden
+        console.warn('[SGI] No se pudo verificar el acceso todavía:', e.code || e.message);
+      }
       const lg = document.getElementById('sgi-login'); if (lg) lg.remove();
       fs.doc('usuarios/' + u.uid).set({ name: u.displayName || email.split('@')[0], email, photo: u.photoURL || '', ultimoIngreso: new Date().toISOString() }, { merge: true }).catch(() => {});
       const names = {};
