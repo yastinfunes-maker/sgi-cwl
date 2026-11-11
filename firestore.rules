@@ -22,12 +22,12 @@ service cloud.firestore {
       allow write: if habilitado() && request.auth.uid == uid;
     }
 
-    // Datos del SGI: job papers (con sus hojas), NC, auditorías, documentos,
+    // Datos del SGI: job papers (con sus hojas), historial Ops & KPIs (F04), NC, auditorías, documentos,
     // incidentes, personal, vehículos, equipos, herramientas, capacitaciones, horas hombre,
     // fotos y archivos adjuntos
     match /{col}/{resto=**} {
       allow read, write: if habilitado()
-        && col in ['servicios', 'nc', 'aud', 'doc', 'inc', 'per', 'veh', 'eqp', 'hta', 'cap', 'hh', 'fotos', 'adjuntos'];
+        && col in ['servicios', 'ops', 'nc', 'aud', 'doc', 'inc', 'per', 'veh', 'eqp', 'hta', 'cap', 'hh', 'fotos', 'adjuntos'];
     }
   }
 }

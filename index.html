@@ -398,6 +398,7 @@ header.top .wrap{gap:12px}
   <div class="sb-grp">Operación</div>
   <a class="nv" href="#jobpapers" data-r="jobpapers"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8 11h8M8 15h5"/></svg><div><b>Job Papers</b><small>Carga de servicios WL</small></div></a>
   <a class="nv" href="#control" data-r="control"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-5M12 16V8M16 16v-3"/></svg><div><b>Control de gestión</b><small>Tableros e indicadores</small></div></a>
+  <a class="nv" href="#tablero-ops" data-r="tablero-ops"><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16V9M11 16V5M15 16v-4M19 16V8"/></svg><div><b>Ops &amp; KPIs</b><small>Trabajos, facturación, bonos</small></div></a>
   <a class="nv" href="#flota" data-r="flota"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><div><b>Flota</b><small>Unidades y vencimientos</small></div></a>
   <a class="nv" href="#equipos" data-r="equipos"><svg viewBox="0 0 24 24"><path d="M14 7l3-3 3 3-3 3zM4 20l9-9M8 6l10 10"/></svg><div><b>Equipos</b><small>Certificaciones y vencimientos</small></div></a>
   <a class="nv" href="#herramientas" data-r="herramientas"><svg viewBox="0 0 24 24"><path d="M14.5 5.5a4 4 0 0 0-5 5L4 16l4 4 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2.5-.5-.5-2.5z"/></svg><div><b>Herramientas</b><small>Codificadas y calibraciones</small></div></a>
@@ -604,6 +605,7 @@ async function connect(){
       S.rsvc=n; persist(); rebuild(); syncUI(); if (S.live) flush(); refresh(true);
     }, err=>{ clearTimeout(timer); S.live=false; syncUI(); if (err&&err.code==='revoked') banner('Se retiró el acceso a la base compartida.', 'warn'); });
     for (const c of ['nc','aud','doc','inc','per','veh','eqp','hta','cap','hh']) db.collection(c).onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.rcol[c]=n; persist(); rebuild(); if (c==='per'||c==='veh') fillDyn(); refresh(true); }, ()=>{});
+    db.collection('ops').onSnapshot(snap=>{ const n={}; for (const d of snap.docs) n[d.id]=d.data(); S.ops=n; if (S.route==='tablero-ops'||S.view==='ctrl') refresh(true); }, ()=>{});
     if (S.sid) watchHojas(S.sid);
   } catch(e){ clearTimeout(timer); syncUI(); }
 }
@@ -688,6 +690,7 @@ const TABS = [
    {s:'f', t:'Personal de Condor', f:[F('personal.supervisor','Supervisor','dl',{ls:'dl-pers'}),F('personal.guinchero','Chofer guinchero','dl',{ls:'dl-pers'}),F('personal.op1','Operario 1','dl',{ls:'dl-pers'}),F('personal.op2','Operario 2','dl',{ls:'dl-pers'}),F('personal.op3','Operario 3','dl',{ls:'dl-pers'}),F('personal.supervisor2','Supervisor 2','dl',{ls:'dl-pers'})]},
    {s:'f', t:'Explosivo a usar', f:[F('plan.canon','Medida de cañón y TPP','sel',{o:M.canones}), F('plan.carga','Tipo de carga','sel',{o:M.cargas}), F('plan.iniciador','Iniciador','sel',{o:M.iniciadores}), F('plan.cortador','Cortadores','sel',{o:M.cortadores}), F('plan.cuerda','Cuerda explosiva / cordón'), F('plan.taponera','Taponera','sel',{o:['TAPONERA #20','TAPONERA #10','TAPONERA #05']})]},
    {s:'f', t:'Datos a completar en el pozo', f:[F('hitos.salida','Salida de base','dtt'), F('hitos.llegada','Llegada a pozo','dtt'), F('hitos.pozoListo','Pozo listo','dtt'), F('hitos.finOp','Fin de operación','dtt'), F('hitos.regreso','Regreso a base','dtt'), F('ot','Orden de trabajo'), F('companyMan','Company man','tx',{span:'c2'}), F('trabajo','Trabajo','sel',{o:M.trabajos}), F('reservorio','Reservorio','sel',{o:M.reservorios})]},
+   {s:'f', t:'Facturación (alimenta Ops & KPIs)', f:[F('fact.usd','Remito valorizado (USD)','nm'), F('fact.tkt','Envío de ticket','dt'), F('fact.pl','Enviado a P&L','sel',{o:['Si','No']}), F('fact.id','ID facturación')]},
    {s:'calc', t:'Tiempos de respuesta', rows:[['Respuesta (llamada → llegada)',d=>hfmt(hoursBetween(d.hitos?.llamada,d.hitos?.llegada))],['Espera pozo (llegada → pozo listo)',d=>hfmt(hoursBetween(d.hitos?.llegada,d.hitos?.pozoListo))],['En pozo (llegada → fin operación)',d=>hfmt(hoursBetween(d.hitos?.llegada,d.hitos?.finOp))],['Total (salida → regreso)',d=>hfmt(hoursBetween(d.hitos?.salida,d.hitos?.regreso))],['Km recorridos',d=>fmt((d.vehiculos||[]).reduce((a,v)=>a+kmOf(v),0))]]},
    {s:'f', t:'Guía de transporte', f:[F('origen','Salida / origen','tx',{def:'NEUQUEN'}), F('provOrigen','Provincia de origen','tx',{def:'NEUQUEN'})]},
   ],
@@ -991,6 +994,7 @@ const ROUTES = {
   jobpapers:{t:'Job Papers', s:'Registro de servicios · N° de parte', v:'reg', act:'+ Nuevo servicio', nav:'jobpapers'},
   control:{t:'Control de gestión', s:'Tableros e indicadores', v:'ctrl', nav:'control'},
   'tablero-operativo':{t:'Tablero operativo', s:'Control de gestión · Job Papers', v:'ind', nav:'control'},
+  'tablero-ops':{t:'Ops & KPIs', s:'F04 PG-14 · trabajos, facturación y bonos', v:'tab', nav:'tablero-ops'},
   'tablero-npt':{t:'Tablero NPT', s:'Control de gestión · tiempo no productivo', v:'tab', nav:'control'},
   'tablero-hse':{t:'Tablero HSE', s:'HSE · indicadores', v:'tab', nav:'tablero-hse'},
   'tablero-calidad':{t:'Tablero de calidad', s:'Control de gestión · SGI', v:'tab', nav:'control'},
@@ -1617,6 +1621,7 @@ function flotaStats(){
 /* ----- dashboards ----- */
 const DASH = {
   'tablero-operativo': {t:'Tablero operativo', tag:'F01 PG-15', freq:'MENSUAL', ico:'M4 20V4M4 20h16M8 16v-5M12 16V8M16 16v-3', d:'Servicios, horas operativas, misruns, explosivos, herramientas y facturación de remitos desde los Job Papers.', stat:()=>[fmt(svcIn12().length),'servicios · 12 meses']},
+  'tablero-ops': {t:'Ops & KPIs', tag:'F04 PG-14', freq:'MENSUAL', ico:'M4 19h16M7 16V9M11 16V5M15 16v-4M19 16V8', d:'Base de trabajos y KPIs del F04: facturación valorizada por cliente y mes, ticket promedio, NPT, misruns, satisfacción y bonos 21–20. Historial F04 + Job Papers del sistema.', stat:()=>{ const y=String(new Date().getFullYear()); const r=opsRows().filter(x=>x.ym.startsWith(y)); return [r.length?'USD '+usdk(r.reduce((a,x)=>a+num(x.usd),0)):'—', r.length+' trabajos · '+y]; }},
   'tablero-npt': {t:'Tablero NPT', tag:'F02 PG-15', freq:'MENSUAL', ico:'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', d:'Tiempo no productivo por mes, compañía y tipo de servicio, desde el Reporte de tiempo.', stat:()=>{ const s=nptStats(svcIn12()); return [s.pct==null?'—':fmt(s.pct,1)+' %','NPT · 12 meses']; }},
   'tablero-hse': {t:'Tablero HSE', tag:'PHSE', freq:'MENSUAL', ico:'M3 12h4l3-7 4 14 3-7h4', d:'Incidentes, índices de frecuencia y gravedad, riesgo de viajes y desvíos en checklists.', stat:()=>{ const s=hseStats(); return [fmt(s.inc.length),'incidentes · 12 meses']; }},
   'tablero-calidad': {t:'Tablero de calidad', tag:'SGI', freq:'MENSUAL', ico:'M8 12l3 3 5-6M4 4h16v16H4z', d:'No conformidades abiertas y vencidas, programa de auditorías, satisfacción del cliente y documentos.', stat:()=>{ const s=calStats(); return [fmt(s.open.length),'NC abiertas']; }},
@@ -1665,6 +1670,7 @@ function renderTab(rk){
   const v=$('#v-tab'); const D=DASH[rk];
   const head = `<div class="listhead"><div><h2>${esc(D.t)}</h2><div class="muted small">${esc(D.d)}</div></div><a class="btn-g" href="#control">← Control de gestión</a></div>`;
   const m=last12();
+  if (rk==='tablero-ops'){ renderOps(v, head); return; }
   if (rk==='tablero-npt'){
     const rows=filtered(); const s=nptStats(rows);
     const by=(key)=>{ const o={}; for (const d of rows){ const ks=[].concat(key(d)); for (const k0 of (ks.length?ks:['—'])){ const k=k0||'—'; const a=o[k]||(o[k]={n:k,c:0,op:0,npt:0}); a.c++; a.op+=d.ind?.tiempo?.op||0; a.npt+=d.ind?.tiempo?.npt||0; } } return Object.values(o).filter(a=>a.op+a.npt).sort((a,b)=>b.npt-a.npt); };
@@ -1712,6 +1718,158 @@ function renderTab(rk){
       + `<div class="cgrid">${card('Km por unidad','servicios de los últimos 12 meses',barChart(Object.entries(s.km).sort((a,b)=>b[1].km-a[1].km).slice(0,14).map(([n,x])=>[n,x.km]),{int:1,aria:'Km por unidad',empty:'Sin km cargados en las carátulas de los últimos 12 meses.'}),true)}
         ${card('Unidades','estado y vencimientos',`<div class="tbl-wrap"><table><thead><tr><th>Unidad</th><th>Estado</th><th>Seguro</th><th>VTV</th><th class="r">Servicios</th></tr></thead><tbody>${units.map(n=>{ const d=s.veh.find(x=>x.nro===n)||colRows('veh').find(x=>x.nro===n)||{}; return `<tr ${d._id?`class="click" data-open="flota|${esc(d._id)}"`:''}><td class="mono">${esc(n)}<div class="muted small" style="font-family:var(--body)">${esc(d.modelo||'')} ${esc(d.dominio||'')}</div></td><td>${stPill(REG.flota,d.estado)}</td><td>${venc(d.vSeguro,true)}</td><td>${venc(d.vVTV,true)}</td><td class="r num">${s.km[n]?.s||0}</td></tr>`; }).join('')}</tbody></table></div>`,true)}</div>`;
     return;
+  }
+}
+
+/* ================= Ops & KPIs (F04 PG-14) =================
+   Une dos fuentes en una sola base de trabajos:
+   - Historial: la "Base de datos" del F04 PG-14 Ops & KPIs, importada a la colección "ops" (un documento por año).
+   - Sistema: cada Job Paper cargado en esta plataforma (colección "servicios").
+   Si un remito aparece en las dos, vale el del sistema. Desde la importación en adelante los KPIs se alimentan solos
+   con los Job Papers; el F04 queda como historial. */
+const BONO_PCT = 0.02;       // bono operativo del supervisor: 2 % del ticket (hoja "Bonos" del F04)
+const BONO_DIA = 21;         // el período de bonos va del día 21 al 20 del mes siguiente
+const CLI_NORM = {'YPF S.A':'YPF','Vista':'Vista O&G','PCR S.A':'PCR','Petroleo Sud Amer.':'Petroleos Sudamericanos','Patagonia Energy S.A':'Patagonia Energy','CAPEX':'Capex'};
+const normCli = c => { const s=String(c||'').trim(); return CLI_NORM[s]||s||'—'; };
+const normRem = r => String(r||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+S.ops = {};
+const OPF = {y:String(new Date().getFullYear()), m:'', cli:'', bp:''};
+
+function svcToOps(d){
+  const c=d.c||{}, i=d.ind||{}, p=c.personal||{}, sv=servsOf(c), f=c.fact||{};
+  const isE = k => servMap[k]?.cat==='EXPLOSIVOS';
+  const uwl=(c.vehiculos||[]).find(v=>v.rol==='Unidad WL' && v.nro);
+  const usd = num(f.usd) || (i.remypf?.usd||0) + (i.remtec?.usd||0);
+  const car = i.disparo?.car ?? null, mis = i.disparo?.mis ?? null;
+  return { src:'sistema', sid:d._id, rem:c.nro||'', f:c.hitos?.llegada||c.fecha||'', ff:c.hitos?.finOp||c.fecha||'', cli:normCli(c.compania), ope:normCli(c.compania),
+    pozo:c.pozo||'', yac:c.yacimiento||'', eq:c.equipo||'', prov:c.provincia||'', cat:c.trabajo||'',
+    sr:sv.filter(k=>!isE(k)).map(k=>servMap[k]?.nombre||k).join(' + '), se:sv.filter(isE).map(k=>servMap[k]?.nombre||k).join(' + '),
+    dist:num(c.distancia)||null, prof:num(c.profMax)||null, sup1:p.supervisor||'', sup2:p.supervisor2||'', gui:p.guinchero||'', ay:[p.op1,p.op2,p.op3].filter(Boolean),
+    uwl:uwl?uwl.nro:'', top:i.tiempo?.op ?? null, tp:i.tiempo?.npt ?? null, tsb:i.tiempo?.esp ?? null, tt:i.caratula?.tot ?? null,
+    runs: car!=null ? Math.max(car-(mis||0),0) : null, mis, usd: usd||null, sc: i.satis?.avg!=null ? i.satis.avg/100 : null,
+    tkt:f.tkt||'', fac:f.id||'', pl:f.pl||'', estado:d.estado||'Abierto' };
+}
+function opsRows(){
+  const live=allSvc().filter(d=>d.c && d.c.fecha).map(svcToOps);
+  const liveRem=new Set(live.map(r=>normRem(r.rem)).filter(Boolean));
+  const hist=[]; for (const doc of Object.values(S.ops||{})) for (const r of (doc && doc.rows)||[]) if (!liveRem.has(normRem(r.rem))) hist.push({...r, src:'historial', cli:normCli(r.cli)});
+  return [...hist, ...live].map(r=>({...r, ym:String(r.ff||r.f||'').slice(0,7)})).filter(r=>/^\d{4}-\d{2}$/.test(r.ym));
+}
+const sumBy = (rows, key, val) => { const o={}; for (const r of rows){ const k=key(r)||'—'; const a=o[k]||(o[k]={k, n:0, usd:0, top:0, tp:0, mis:0, runs:0, sc:[]}); a.n++; a.usd+=num(r.usd); a.top+=num(r.top); a.tp+=num(r.tp); a.mis+=num(r.mis); a.runs+=num(r.runs); if (r.sc!=null && r.sc!=='') a.sc.push(num(r.sc)); } return Object.values(o); };
+const usdf = v => 'USD '+fmt(v,0);
+const usdk = v => v>=1e6 ? fmt(v/1e6,1)+' M' : v>=1e3 ? fmt(v/1e3,0)+' k' : fmt(v,0);
+const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+function bonoPeriod(key){ // key 'YYYY-MM' = mes en que cierra el período (21 del mes anterior al 20 de ese mes)
+  const [y,m]=key.split('-').map(Number); const a=new Date(y,m-2,BONO_DIA), b=new Date(y,m-1,BONO_DIA-1);
+  const iso=x=>x.getFullYear()+'-'+pad2(x.getMonth()+1)+'-'+pad2(x.getDate()); return [iso(a), iso(b)];
+}
+
+function renderOps(v, head){
+  const all=opsRows();
+  const years=[...new Set(all.map(r=>r.ym.slice(0,4)))].sort().reverse();
+  if (years.length && !years.includes(OPF.y)) OPF.y=years[0];
+  const clis=[...new Set(all.map(r=>r.cli))].sort((a,b)=>a.localeCompare(b));
+  const rows=all.filter(r=>(!OPF.y||r.ym.startsWith(OPF.y)) && (!OPF.m||r.ym.slice(5)===OPF.m) && (!OPF.cli||r.cli===OPF.cli));
+  const nHist=all.filter(r=>r.src==='historial').length, nSis=all.length-nHist;
+  const imp = `<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-g" id="ops-csv">Exportar CSV</button><button class="btn-g" id="ops-imp">Importar datos iniciales</button><input type="file" id="ops-file" accept=".json,application/json" hidden></div>`;
+  const bar = `<div class="colbar" style="grid-template-columns:repeat(3,minmax(0,1fr)) auto">
+    <select id="ops-y" aria-label="Año">${years.map(y=>`<option ${y===OPF.y?'selected':''}>${y}</option>`).join('')||'<option value="">—</option>'}</select>
+    <select id="ops-m" aria-label="Mes"><option value="">Todos los meses</option>${MN.map((n,i)=>`<option value="${pad2(i+1)}" ${pad2(i+1)===OPF.m?'selected':''}>${n}</option>`).join('')}</select>
+    <select id="ops-c" aria-label="Cliente"><option value="">Todos los clientes</option>${clis.map(c=>`<option ${c===OPF.cli?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <span class="muted small">${fmt(nHist)} del historial F04 · ${fmt(nSis)} del sistema</span></div>`;
+  if (!all.length){
+    v.innerHTML = head.replace('</a></div>', '</a></div>') + `<div class="card"><div class="empty" style="padding:26px">Todavía no hay trabajos. Cargá el historial con <b>Importar datos iniciales</b> (archivo <span class="mono">sgi-carga-inicial.json</span>) o empezá a cargar Job Papers.</div></div><div style="margin-top:12px">${imp}</div>`;
+    bindOpsImport(); return;
+  }
+  const usd=rows.reduce((a,r)=>a+num(r.usd),0), nUsd=rows.filter(r=>num(r.usd)>0).length;
+  const top=rows.reduce((a,r)=>a+num(r.top),0), tp=rows.reduce((a,r)=>a+num(r.tp),0);
+  const mis=rows.reduce((a,r)=>a+num(r.mis),0), runs=rows.reduce((a,r)=>a+num(r.runs),0);
+  const sc=rows.map(r=>r.sc).filter(x=>x!=null&&x!=='').map(num);
+  const sinPL=rows.filter(r=>!/^s/i.test(String(r.pl||''))).length;
+  const prevY=String(+OPF.y-1), prev=all.filter(r=>r.ym.startsWith(prevY) && (!OPF.m||r.ym.slice(5)===OPF.m) && (!OPF.cli||r.cli===OPF.cli));
+  const pUsd=prev.reduce((a,r)=>a+num(r.usd),0);
+  const vs = (a,b) => b? `${a>=b?'+':''}${fmt((a/b-1)*100,0)} % vs ${prevY}` : '';
+  const months=MN.map((n,i)=>OPF.y+'-'+pad2(i+1));
+  const byM=months.map(m=>{ const r=rows.filter(x=>x.ym===m); return [MN[+m.slice(5)-1], r.reduce((a,x)=>a+num(x.usd),0), r.length]; });
+  const byCli=sumBy(rows,r=>r.cli).sort((a,b)=>b.usd-a.usd||b.n-a.n);
+  const bySup=sumBy(rows,r=>r.sup1).sort((a,b)=>b.n-a.n);
+  const byY=sumBy(all.filter(r=>(!OPF.cli||r.cli===OPF.cli)),r=>r.ym.slice(0,4)).sort((a,b)=>a.k.localeCompare(b.k));
+  // bonos: período 21→20
+  const bps=[...new Set(all.map(r=>{ const d=String(r.f||r.ff).slice(0,10); const [y,m,dd]=d.split('-').map(Number); const x=new Date(y,m-1+(dd>=BONO_DIA?1:0),1); return x.getFullYear()+'-'+pad2(x.getMonth()+1); }))].sort().reverse();
+  if (!OPF.bp || !bps.includes(OPF.bp)) OPF.bp=bps[0];
+  const [ba,bb]=bonoPeriod(OPF.bp);
+  const bRows=all.filter(r=>{ const d=String(r.f||r.ff).slice(0,10); return d>=ba && d<=bb; });
+  const bSup=sumBy(bRows,r=>r.sup1).sort((a,b)=>b.usd-a.usd);
+  const tbl=(h,body)=>`<div class="tbl-wrap"><table><thead><tr>${h}</tr></thead><tbody>${body}</tbody></table></div>`;
+  v.innerHTML = head.replace(/<a class="btn-g" href="#control">/, imp+'<a class="btn-g" href="#control">') + bar
+   + kpiRow([['Trabajos',fmt(rows.length),prev.length?vs(rows.length,prev.length):'en el período'],['Facturación valorizada',usdf(usd),pUsd?vs(usd,pUsd):`${nUsd} remitos con valor`],['Ticket promedio',nUsd?usdf(usd/nUsd):'—','por remito valorizado'],['Clientes',fmt(byCli.length),byCli[0]?`mayor: ${byCli[0].k}`:''],
+      ['NPT',top+tp?fmt(tp/(top+tp)*100,1)+' %':'—',`${hfmt(tp)} h perdidas`, top+tp&&tp/(top+tp)>.05?'bad':''],['Misruns',fmt(mis),runs?`${fmt(mis/(runs+mis)*100,1)} % de las carreras`:''],['Satisfacción del cliente',sc.length?fmt(avg(sc)*100,0)+' %':'—',`${sc.length} encuestas`],['Sin pasar a P&L',fmt(sinPL),'remitos sin marcar como enviados', sinPL?'amber':'']])
+   + `<div class="cgrid">${card('Facturación por mes',OPF.y+(OPF.cli?' · '+esc(OPF.cli):''),barChart(byM.map(([l,u])=>[l,u]),{f:usdk,axf:usdk,aria:'Facturación por mes',empty:'Sin remitos valorizados en el período.'}),true)}
+     ${card('Trabajos por mes',OPF.y,barChart(byM.map(([l,,n])=>[l,n]),{int:1,color:'var(--amber)',aria:'Trabajos por mes'}),true)}
+     ${card('Por cliente','trabajos, facturación y participación',tbl('<th>Cliente</th><th class="r">Trab.</th><th class="r">USD</th><th class="r">%</th><th class="r">Ticket</th>',byCli.map(a=>`<tr><td>${esc(a.k)}</td><td class="r num">${a.n}</td><td class="r num">${fmt(a.usd,0)}</td><td class="r num">${usd?fmt(a.usd/usd*100,1):'—'}</td><td class="r num">${a.n?fmt(a.usd/a.n,0):'—'}</td></tr>`).join('')))}
+     ${card('Por supervisor','trabajos del período',tbl('<th>Supervisor</th><th class="r">Trab.</th><th class="r">USD</th><th class="r">NPT %</th>',bySup.map(a=>`<tr><td>${esc(a.k)}</td><td class="r num">${a.n}</td><td class="r num">${fmt(a.usd,0)}</td><td class="r num">${a.top+a.tp?fmt(a.tp/(a.top+a.tp)*100,1):'—'}</td></tr>`).join('')))}
+     ${card('Comparativo anual',OPF.cli?esc(OPF.cli):'todos los clientes',tbl('<th>Año</th><th class="r">Trabajos</th><th class="r">USD</th><th class="r">Ticket</th><th class="r">Var. USD</th>',byY.map((a,i)=>`<tr><td class="mono">${a.k}</td><td class="r num">${a.n}</td><td class="r num">${fmt(a.usd,0)}</td><td class="r num">${a.n?fmt(a.usd/a.n,0):'—'}</td><td class="r num">${i&&byY[i-1].usd?fmt((a.usd/byY[i-1].usd-1)*100,0)+' %':'—'}</td></tr>`).join('')))}
+     ${card('Bonos operativos',`período ${fdate(ba)} al ${fdate(bb)} · ${fmt(BONO_PCT*100,0)} % del ticket`,`<div style="padding:10px 14px 0"><select id="ops-bp" aria-label="Período de bonos">${bps.map(p=>`<option value="${p}" ${p===OPF.bp?'selected':''}>${(()=>{const [a,b]=bonoPeriod(p); return fdate(a)+' → '+fdate(b);})()}</option>`).join('')}</select></div>`+tbl('<th>Supervisor</th><th class="r">Trab.</th><th class="r">Tickets USD</th><th class="r">Bono USD</th>',bSup.map(a=>`<tr><td>${esc(a.k)}</td><td class="r num">${a.n}</td><td class="r num">${fmt(a.usd,2)}</td><td class="r num"><b>${fmt(a.usd*BONO_PCT,2)}</b></td></tr>`).join('')+`<tr><td><b>Total</b></td><td class="r num">${bRows.length}</td><td class="r num">${fmt(bSup.reduce((a,x)=>a+x.usd,0),2)}</td><td class="r num"><b>${fmt(bSup.reduce((a,x)=>a+x.usd,0)*BONO_PCT,2)}</b></td></tr>`))}
+     ${card('Trabajos del período',`últimos ${fmt(Math.min(rows.length,OPF.lim||50))} de ${fmt(rows.length)} · los del sistema se abren con un clic · el detalle completo sale en “Exportar CSV”`,tbl('<th>Fecha</th><th>Remito</th><th>Cliente</th><th>Pozo</th><th>Servicio</th><th>Supervisor</th><th class="r">USD</th><th>Origen</th>',rows.slice().sort((a,b)=>String(b.f).localeCompare(String(a.f))).slice(0,OPF.lim||50).map(r=>`<tr ${r.sid?`class="click" data-svc="${esc(r.sid)}"`:''}><td class="mono small">${esc(fdate(String(r.f).slice(0,10)))}</td><td class="mono">${esc(r.rem)}</td><td>${esc(r.cli)}</td><td>${esc(r.pozo)}</td><td class="small">${esc([r.sr,r.se].filter(Boolean).join(' + '))}</td><td>${esc(r.sup1)}</td><td class="r num">${r.usd?fmt(r.usd,0):'—'}</td><td><span class="pill ${r.src==='sistema'?'p-closed':'p-open'}">${r.src==='sistema'?'Sistema':'F04'}</span></td></tr>`).join(''))+(rows.length>(OPF.lim||50)?'<div style="padding:10px 14px"><button class="btn-g" id="ops-more">Ver 100 más</button></div>':''),true)}</div>`;
+  const re=()=>renderOps(v, head);
+  $('#ops-y').onchange=e=>{ OPF.y=e.target.value; re(); };
+  $('#ops-m').onchange=e=>{ OPF.m=e.target.value; re(); };
+  $('#ops-c').onchange=e=>{ OPF.cli=e.target.value; re(); };
+  $('#ops-bp').onchange=e=>{ OPF.bp=e.target.value; re(); };
+  v.querySelectorAll('[data-svc]').forEach(t=>t.onclick=()=>openSvc(t.dataset.svc));
+  $('#ops-csv').onclick=()=>exportOpsCSV(rows);
+  const mm=$('#ops-more'); if (mm) mm.onclick=()=>{ OPF.lim=(OPF.lim||50)+100; re(); };
+  bindOpsImport();
+}
+
+function exportOpsCSV(rows){
+  const cols=[['src','Origen'],['f','Fecha de inicio'],['ff','Fecha de finalización'],['ym','Mes'],['cli','Cliente'],['ope','Operadora'],['rem','Remito'],['pozo','Pozo'],['sr','Servicio de registro'],['se','Servicio explosivo'],['loc','Localidad'],['prov','Provincia'],['yac','Yacimiento'],['eq','Equipo'],['cat','Categoría de trabajo'],['dist','Distancia'],['prof','Prof. máxima'],['mts','Mts registrados'],['carg','Cantidad de cargas'],['cort','Cortadores'],['tap','Tapones'],['runs','Runs exitosas'],['mis','Missrun'],['tv','Tiempo de viaje'],['tt','Tiempo total'],['tp','Tiempo perdido'],['tsb','Tiempo stand by'],['top','Tiempo operativo neto'],['mat','Costo mat. USD'],['sup1','Supervisor #1'],['sup2','Supervisor #2'],['gui','Guinchero'],['ay','Ayudantes'],['uwl','Unidad WL'],['usd','Remito valorizado USD'],['tkt','Envío de tkt'],['pl','Enviado a P&L'],['fac','ID facturación'],['sc','Satisfacción (0-1)'],['obs','Observaciones']];
+  const q=x=>{ const s=Array.isArray(x)?x.join(' / '):(x==null?'':String(x)); return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const csv='﻿'+cols.map(c=>c[1]).join(';')+'\n'+rows.map(r=>cols.map(([k])=>{ const v=r[k]; return typeof v==='number'? String(v).replace('.',',') : q(v); }).join(';')).join('\n');
+  saveFile(`Ops_KPIs_${OPF.y||'todo'}${OPF.m?'-'+OPF.m:''}.csv`, new Blob([csv],{type:'text/csv'})).then(ok=>ok&&toast('CSV descargado'));
+}
+
+/* ----- importación de datos iniciales (archivo sgi-carga-inicial.json) -----
+   Personal, flota, equipos y herramientas: si ya existe (mismo CUIL, Nº de unidad o ID del sistema anterior) se actualiza;
+   si no, se crea. Los campos vacíos del archivo no borran lo que ya está cargado.
+   Historial F04: se guarda en la colección "ops", un documento por año (se reemplaza completo al reimportar). */
+function bindOpsImport(){
+  const b=$('#ops-imp'), fi=$('#ops-file'); if (!b||!fi) return;
+  b.onclick=()=>{ if (S.canWrite===false) return toast('Tu acceso es de solo lectura'); fi.value=''; fi.click(); };
+  fi.onchange=async()=>{ const f=fi.files&&fi.files[0]; if (!f) return; let data; try { data=JSON.parse(await f.text()); } catch(e){ return toast('El archivo no es un JSON válido'); } importInicial(data); };
+}
+async function importInicial(data){
+  if (!data || data.version!==1) return toast('Este archivo no es una carga inicial del SGI');
+  const nOps=Object.values(data.ops||{}).reduce((a,x)=>a+x.length,0);
+  const msg=`Se van a cargar:\n• ${data.per?.length||0} personas\n• ${data.veh?.length||0} unidades\n• ${data.eqp?.length||0} equipos\n• ${data.hta?.length||0} herramientas\n• ${nOps} trabajos del historial F04 (${Object.keys(data.ops||{}).join(', ')})\n\nLo que ya existe se actualiza; no se duplica. ¿Continuar?`;
+  if (!confirm(msg)) return;
+  const now=new Date().toISOString(), base={importado:now, editadoPor:S.uid||null, updatedAt:now};
+  const keyOf = { per:d=>d.cuil?'cuil:'+String(d.cuil).replace(/\D/g,''):'nom:'+String(d.nombre||'').toUpperCase().replace(/\s+/g,' ').trim(),
+                  veh:d=>'nro:'+String(d.nro||'').trim(), eqp:d=>d.idSync!=null?'sync:'+d.idSync:'cod:'+d.codigo, hta:d=>d.idSync!=null?'sync:'+d.idSync:'cod:'+d.codigo };
+  const altKey = { per:d=>'nom:'+String(d.nombre||'').toUpperCase().replace(/\s+/g,' ').trim() };
+  const idPre = {per:'p-', veh:'v-', eqp:'e-', hta:'h-'};
+  let nNew=0, nUpd=0;
+  for (const c of ['per','veh','eqp','hta']){
+    const exist={}; for (const [id,d] of Object.entries(S.col[c]||{})) if (d){ exist[keyOf[c](d)]=id; if (altKey[c]) exist[altKey[c](d)]=exist[altKey[c](d)]||id; }
+    for (const raw of data[c]||[]){
+      const {_k, ...d}=raw; const k=keyOf[c](d); const id=exist[k] || (altKey[c] && exist[altKey[c](d)]);
+      const clean=Object.fromEntries(Object.entries(d).filter(([,x])=>x!==''&&x!=null));
+      if (id){ S.out.push({op:'update', path:`${c}/${id}`, data:{...clean, ...base}}); nUpd++; }
+      else { const nid=idPre[c]+String(_k||k).replace(/[^A-Za-z0-9]/g,'').slice(0,40); S.out.push({op:'set', path:`${c}/${nid}`, data:{...d, ...base, creado:now}}); exist[k]=nid; nNew++; }
+    }
+  }
+  persist(); rebuild(); fillDyn(); syncUI(); flush();
+  toast(`Maestros: ${nNew} nuevos y ${nUpd} actualizados. Subiendo…`);
+  // historial F04 (requiere conexión: son documentos grandes y no se guardan en la cola del equipo)
+  if (nOps){
+    if (!S.db || !navigator.onLine){ banner('Los maestros quedaron guardados. El <b>historial F04</b> necesita conexión a internet: volvé a importar el archivo cuando haya señal.', 'warn'); return; }
+    let ok=0;
+    for (const [y,rows] of Object.entries(data.ops)){
+      try { await S.db.doc('ops/'+y).set({year:y, rows, fuente:data.fuentes?.historial||'F04', importado:now, editadoPor:S.uid||null}); S.ops[y]={year:y, rows}; ok++; }
+      catch(e){ if (/permission|insufficient|unavailable/i.test(String(e&&(e.message||e.code)))){ banner('La base todavía no acepta el <b>historial de Ops</b>: publicá las reglas nuevas en Firebase (Firestore → Reglas) y volvé a importar el archivo.', 'warn'); break; } toast('No se pudo subir el año '+y); }
+    }
+    if (ok) toast(`Historial F04 cargado: ${ok} año(s), ${nOps} trabajos`);
+    refresh(true);
   }
 }
 
