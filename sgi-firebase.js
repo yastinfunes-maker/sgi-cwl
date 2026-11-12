@@ -18,6 +18,7 @@
   #sgi-login input:-webkit-autofill{-webkit-box-shadow:0 0 0 40px #f6f8f7 inset;-webkit-text-fill-color:#172126}
   #sgi-login button{width:100%;margin-top:14px;font:600 15px system-ui,sans-serif;padding:11px;border-radius:6px;border:1px solid #0d5b6b;background:#0d5b6b;color:#fff;cursor:pointer}
   #sgi-login button.alt{background:#fff;color:#0d5b6b}
+  #sgi-login button.ms{margin-top:4px;background:#2f2f2f;border-color:#2f2f2f}
   #sgi-login .lnk{background:none;border:0;color:#0d5b6b;padding:6px;margin-top:6px;font-size:13px;width:auto;display:block;margin-inline:auto}
   #sgi-login .msg{min-height:20px;font-size:13px;color:#b3261e;text-align:center;margin-top:10px}
   #sgi-login .or{display:flex;align-items:center;gap:8px;color:#7a888d;font-size:12px;margin-top:14px}
@@ -29,6 +30,8 @@
     d.innerHTML = `<form class="box" novalidate>
       <img src="logo.png" alt="Condor Wireline">
       <h1>SGI Condor Wireline</h1><p>Ingresá con tu usuario para cargar y consultar el sistema.</p>
+      <button type="button" id="sgi-ms" class="ms">Ingresar con Microsoft (cuenta CWL)</button>
+      <div class="or">o con email y contraseña</div>
       <label for="sgi-email">Email</label><input id="sgi-email" type="email" autocomplete="username" required>
       <label for="sgi-pass">Contraseña</label><input id="sgi-pass" type="password" autocomplete="current-password" required>
       <button type="submit">Ingresar</button>
@@ -42,10 +45,20 @@
       const c = (e && e.code) || '';
       msg(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('user-not-found') ? 'Email o contraseña incorrectos.' :
           c.includes('too-many-requests') ? 'Demasiados intentos. Probá de nuevo en unos minutos.' :
+          c.includes('account-exists') ? 'Ese email ya entraba con otro método (contraseña o Google). Ingresá con ese método o pedí al administrador que lo unifique.' :
+          c.includes('operation-not-allowed') ? 'El ingreso con Microsoft todavía no está activado en Firebase.' :
           c.includes('network') ? 'Sin conexión. Para ingresar la primera vez necesitás internet.' : 'No se pudo ingresar: ' + (e.message || c));
     };
     d.querySelector('form').onsubmit = ev => { ev.preventDefault(); msg('Ingresando…'); auth.signInWithEmailAndPassword(d.querySelector('#sgi-email').value.trim(), d.querySelector('#sgi-pass').value).catch(err); };
     d.querySelector('#sgi-reset').onclick = () => { const em = d.querySelector('#sgi-email').value.trim(); if (!em) return msg('Escribí tu email y tocá de nuevo.'); auth.sendPasswordResetEmail(em).then(() => msg('Te enviamos un email para cambiar la contraseña.')).catch(err); };
+    d.querySelector('#sgi-ms').onclick = () => {
+      const p = new firebase.auth.OAuthProvider('microsoft.com');
+      const ms = window.SGI_MS_CONFIG || {};
+      p.setCustomParameters({ tenant: ms.tenant || 'organizations', prompt: 'select_account' });
+      p.addScope('User.Read');
+      msg('Abriendo Microsoft…');
+      auth.signInWithPopup(p).catch(e => { if (String(e.code).includes('popup')) auth.signInWithRedirect(p); else err(e); });
+    };
     d.querySelector('#sgi-google').onclick = () => { const p = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(p).catch(e => { if (String(e.code).includes('popup')) auth.signInWithRedirect(p); else err(e); }); };
   }
   function blocked(auth, email) {
